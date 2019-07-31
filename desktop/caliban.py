@@ -507,12 +507,12 @@ class TrackReview:
                 track["daughters"].remove(label_2)
             except ValueError:
                 pass
+        
+        #if label_2 was the parent of any other cells
+        for _, track in self.tracks.items():
+            if track['parent'] == label_2:
+                track['parent'] = label_1
 
-        # in case label_2 was a daughter of label_1
-        try:
-            track_1["daughters"].remove(label_2)
-        except ValueError:
-            pass
 
     def action_delete(self):
         """
