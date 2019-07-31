@@ -580,10 +580,14 @@ class TrackReview:
         	del self.tracks[track]
         	
         # check for duplicate daughter entries before saving file
+        # will also re-sort daughter list if it is not in order
         for cell in self.tracks:
             daughters = self.tracks[cell]['daughters']
             unique_daughters = np.unique(daughters).tolist()
-            self.tracks[cell]['daughters'] = unique_daughters
+            if daughters != unique_daughters:
+                print('Caught duplicate daughters {} of cell {},'.format(daughters, cell) +
+                ' replaced with unique daughters: {}'.format(unique_daughters))
+                self.tracks[cell]['daughters'] = unique_daughters
 
         with tarfile.open(self.filename + ".trk", "w") as trks:
             with tempfile.NamedTemporaryFile("w") as lineage_file:
