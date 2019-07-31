@@ -493,6 +493,12 @@ class TrackReview:
         track_2 = self.tracks[label_2]
 
         track_1["daughters"].append(label_2)
+        
+        #remove potentially duplicated daughter entries
+        daughters = track_1["daughters"]
+        unique_daughters = np.unique(daughters).tolist()
+        track_1['daughters'] = unique_daughters
+        
         track_2["parent"] = label_1
         track_1["frame_div"] = frame_div
 
@@ -572,6 +578,12 @@ class TrackReview:
         		empty_tracks.append(self.tracks[key]['label'])
         for track in empty_tracks:
         	del self.tracks[track]
+        	
+        # check for duplicate daughter entries before saving file
+        for cell in self.tracks:
+            daughters = self.tracks[cell]['daughters']
+            unique_daughters = np.unique(daughters).tolist()
+            self.tracks[cell]['daughters'] = unique_daughters
 
         with tarfile.open(self.filename + ".trk", "w") as trks:
             with tempfile.NamedTemporaryFile("w") as lineage_file:
