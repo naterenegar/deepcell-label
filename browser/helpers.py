@@ -1,4 +1,4 @@
-import boto3, botocore
+import boto3
 from config import S3_KEY, S3_SECRET, S3_BUCKET
 
 ALLOWED_EXTENSIONS = set(['txt', 'md', 'markdown', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])

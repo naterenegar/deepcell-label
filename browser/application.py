@@ -1,18 +1,15 @@
-from caliban import TrackReview, ZStackReview
-from flask import Flask, jsonify, render_template, request, redirect, url_for
 import sys
+import re
 import base64
-import copy
-import os
-import numpy as np
 import traceback
-import boto3, botocore
-from werkzeug.utils import secure_filename
+import json
+
+import pickle
 import sqlite3
 from sqlite3 import Error
-import pickle
-import json
-import re
+
+from caliban import TrackReview, ZStackReview
+from flask import Flask, jsonify, render_template, request, redirect, url_for
 
 # Create and configure the app
 application = Flask(__name__)
@@ -20,7 +17,6 @@ application.config.from_object("config")
 
 TRACK_EXTENSIONS = set(['trk', 'trks'])
 ZSTACK_EXTENSIONS = set(['npz'])
-
 
 
 @application.route("/upload_file/<project_id>", methods=["GET", "POST"])
@@ -52,7 +48,7 @@ def upload_file(project_id):
 
 @application.route("/action/<project_id>/<action_type>", methods=["POST"])
 def action(project_id, action_type):
-    ''' Make an edit operation to the data file and update the object 
+    ''' Make an edit operation to the data file and update the object
         in the database.
     '''
 
@@ -63,7 +59,7 @@ def action(project_id, action_type):
 
     try:
 
-        
+
         conn = create_connection(r"caliban.db")
         with conn:
 
@@ -101,17 +97,17 @@ def get_tracks(project_id):
         format(tn="projects", idf="id", my_id=project_id))
         id_exists = cur.fetchone()
         state = pickle.loads(id_exists[2])
-       
+
         return jsonify({
                 "tracks": state.readable_tracks
                 })
 
 @application.route("/frame/<frame>/<project_id>")
 def get_frame(frame, project_id):
-    ''' Serve modes of frames as pngs. Send pngs and color mappings of 
+    ''' Serve modes of frames as pngs. Send pngs and color mappings of
         cells to .js file.
     '''
-    
+
     frame = int(frame)
     conn = create_connection(r"caliban.db")
     with conn:
@@ -142,7 +138,7 @@ def get_frame(frame, project_id):
 
 @application.route("/load/<filename>", methods=["POST"])
 def load(filename):
-    ''' Initate TrackReview/ZStackReview object and load object to database. 
+    ''' Initate TrackReview/ZStackReview object and load object to database.
         Send specific attributes of the object to the .js file.
     '''
 
@@ -153,14 +149,14 @@ def load(filename):
     folders = re.split('__', filename)
     filename = folders[len(folders) - 1]
     subfolders = folders[2:len(folders)]
-    
+
     subfolders = '/'.join(subfolders)
 
-    input_bucket = folders[0] 
-    output_bucket = folders[1] 
+    input_bucket = folders[0]
+    output_bucket = folders[1]
 
     if '.trk' in filename or '.trks' in filename:
-        
+
         # Initate TrackReview object and entry in database
         track_review = TrackReview(filename, input_bucket, output_bucket, subfolders)
         project = (filename, track_review)
@@ -177,7 +173,7 @@ def load(filename):
             })
 
     if '.npz' in filename:
-        
+
         # Initate ZStackReview object and entry in database
         zstack_review = ZStackReview(filename, input_bucket, output_bucket, subfolders)
         project = (filename, zstack_review)
@@ -198,7 +194,7 @@ def load(filename):
 
 @application.route('/', methods=['GET', 'POST'])
 def form():
-    ''' Request HTML landing page to be rendered if user requests for 
+    ''' Request HTML landing page to be rendered if user requests for
         http://127.0.0.1:5000/.
     '''
     return render_template('form.html')
@@ -206,7 +202,7 @@ def form():
 
 @application.route('/tool', methods=['GET', 'POST'])
 def tool():
-    ''' Request HTML caliban tool page to be rendered after user inputs 
+    ''' Request HTML caliban tool page to be rendered after user inputs
         filename in the landing page.
     '''
 
@@ -224,8 +220,8 @@ def tool():
 
 @application.route('/<file>', methods=['GET', 'POST'])
 def shortcut(file):
-    ''' Request HTML caliban tool page to be rendered if user makes a URL 
-        request to access a specific data file that has been preloaded to the 
+    ''' Request HTML caliban tool page to be rendered if user makes a URL
+        request to access a specific data file that has been preloaded to the
         input S3 bucket (ex. http://127.0.0.1:5000/test.npz).
     '''
 
@@ -237,12 +233,12 @@ def shortcut(file):
     return "error"
 
 def create_connection(db_file):
-    ''' Create a database connection to a SQLite database. 
+    ''' Create a database connection to a SQLite database.
     '''
     conn = None
     try:
         conn = sqlite3.connect(db_file)
-       
+
     except Error as e:
         print(e)
 
@@ -276,12 +272,12 @@ def update_object(conn, project):
     '''
     sql = ''' UPDATE projects
               SET filename = ? ,
-                  state = ? 
+                  state = ?
               WHERE id = ?'''
 
     # convert object to binary data to be stored as data type BLOB
     state_data = pickle.dumps(project[1], pickle.HIGHEST_PROTOCOL)
-  
+
     cur = conn.cursor()
     cur.execute(sql, (project[0], sqlite3.Binary(state_data), project[2]))
     conn.commit()
@@ -304,7 +300,7 @@ def main():
                                         filename text NOT NULL,
                                         state blob NOT NULL); """
     create_table(conn, sql_create_projects_table)
-    conn.commit()    
+    conn.commit()
     conn.close()
 
     application.jinja_env.auto_reload = True

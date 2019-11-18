@@ -1,6 +1,4 @@
 import os
-import sys
-
 
 UPLOAD_FOLDER           =  os.path.join(os.getcwd(), "uploads")
 

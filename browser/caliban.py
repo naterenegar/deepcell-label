@@ -1,30 +1,25 @@
+import sys
+import copy
+import json
+import tarfile
+import tempfile
+from random import random
 from io import BytesIO
 
+import boto3
+import numpy as np
 from imgutils import pngify
 from matplotlib.colors import hsv_to_rgb, LinearSegmentedColormap
 import matplotlib.pyplot as plt
-from random import random
-
-import io
-import copy
-import json
-import matplotlib
-import numpy as np
-import os
-import random
-import tarfile
-import tempfile
-import boto3
-import sys
-from werkzeug.utils import secure_filename
 import skimage.morphology
 from skimage.morphology import watershed
 from skimage.morphology import flood_fill, flood
 from skimage.draw import circle
 from skimage.measure import regionprops
 from skimage.exposure import rescale_intensity
-
+from werkzeug.utils import secure_filename
 from config import S3_KEY, S3_SECRET
+
 
 # S3_KEY =''
 # S3_SECRET =''
@@ -100,8 +95,8 @@ class ZStackReview:
             for _, label in feature.items():
                 slices = list(map(list, consecutive(label['frames'])))
                 slices = '[' + ', '.join(["{}".format(a[0])
-                                if len(a) == 1 else "{}-{}".format(a[0], a[-1])
-                                for a in slices]) + ']'
+                                          if len(a) == 1 else "{}-{}".format(a[0], a[-1])
+                                          for a in slices]) + ']'
                 label["slices"] = str(slices)
 
         return cell_info
@@ -109,24 +104,24 @@ class ZStackReview:
 
     def get_frame(self, frame, raw, edit_background):
         if raw:
-            frame = self.raw[frame][:,:, self.channel]
+            frame = self.raw[frame][:, :, self.channel]
             return pngify(imgarr=frame,
                           vmin=0,
                           vmax=self.max_intensity[self.channel],
                           cmap="cubehelix")
         elif edit_background:
-            frame = self.raw[frame][:,:, self.channel]
+            frame = self.raw[frame][:, :, self.channel]
             return pngify(imgarr=frame,
                           vmin=0,
                           vmax=self.max_intensity[self.channel],
                           cmap="Greys")
         else:
-            frame = self.annotated[frame][:,:, self.feature]
+            frame = self.annotated[frame][:, :, self.feature]
             frame = np.ma.masked_equal(frame, 0)
             return pngify(imgarr=frame,
-                         vmin=0,
-                         vmax=self.num_cells[self.feature] + self.adjustment[self.feature],
-                         cmap=self.color_map)
+                          vmin=0,
+                          vmax=self.num_cells[self.feature] + self.adjustment[self.feature],
+                          cmap=self.color_map)
 
     def get_array(self, frame):
         frame = self.annotated[frame][:,:,self.feature]
