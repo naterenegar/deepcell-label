@@ -190,6 +190,15 @@ class CalibanWindow:
         self.labels_cmap = plt.get_cmap("viridis")
         self.labels_cmap.set_bad('black')
 
+        # options for displaying raw image with different cmaps
+        # cubehelix varies smoothly in lightness and hue, gist_yarg and gist_gray are grayscale
+        # and inverted grayscale, magma and nipy_spectral are alternatives to cubehelix, and prism
+        # has effect of showing contours in brightness of image
+        self.cmap_options = ['cubehelix', 'gist_yarg', 'gist_gray', 'magma', 'nipy_spectral', 'prism']
+        # start on cubehelix cmap
+        self.current_cmap_idx = 0
+        self.current_cmap = self.cmap_options[self.current_cmap_idx]
+
         # composite_view used to store RGB image (composite of raw and annotated) so it can be
         # accessed and updated as needed
         self.composite_view = np.zeros((self.height,self.width,3))
@@ -1995,15 +2004,6 @@ class TrackReview(CalibanWindow):
         self.highlighted_cell_one = -1
         self.highlighted_cell_two = -1
 
-        # options for displaying raw image with different cmaps
-        # cubehelix varies smoothly in lightness and hue, gist_yarg and gist_gray are grayscale
-        # and inverted grayscale, magma and nipy_spectral are alternatives to cubehelix, and prism
-        # has effect of showing contours in brightness of image
-        self.cmap_options = ['cubehelix', 'gist_yarg', 'gist_gray', 'magma', 'nipy_spectral', 'prism']
-        # start on cubehelix cmap
-        self.current_cmap_idx = 0
-        self.current_cmap = self.cmap_options[self.current_cmap_idx]
-
         self.hole_fill_seed = None
 
         self.brush = CalibanBrush(self.height, self.width)
@@ -3171,15 +3171,6 @@ class ZStackReview(CalibanWindow):
         self.highlight = False
         self.highlighted_cell_one = -1
         self.highlighted_cell_two = -1
-
-        # options for displaying raw image with different cmaps
-        # cubehelix varies smoothly in lightness and hue, gist_yarg and gist_gray are grayscale
-        # and inverted grayscale, magma and nipy_spectral are alternatives to cubehelix, and prism
-        # has effect of showing contours in brightness of image
-        self.cmap_options = ['cubehelix', 'gist_yarg', 'gist_gray', 'magma', 'nipy_spectral', 'prism']
-        # start on cubehelix cmap
-        self.current_cmap_idx = 0
-        self.current_cmap = self.cmap_options[self.current_cmap_idx]
 
         self.brush = CalibanBrush(self.height, self.width)
         self.threshold_flag = ''
