@@ -1590,12 +1590,12 @@ class CalibanWindow:
             if self.hide_annotations:
                 cmap = "gray"
             else:
-                cmap = "viridis/gray"
+                cmap = "{}/gray".format(self.labels_cmap.name)
         else:
             if self.draw_raw:
                 cmap = self.current_cmap
             else:
-                cmap = "viridis"
+                cmap = self.labels_cmap.name
 
         return cmap
 
