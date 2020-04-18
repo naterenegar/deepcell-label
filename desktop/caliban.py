@@ -753,12 +753,12 @@ class CalibanWindow:
         # add information text in sidebar to batch
         self.draw_label()
 
+        # draw everything
+        self.batch.draw()
+
         gl.glLineWidth(3)
         self.thick_lines_batch.draw()
         gl.glLineWidth(1)
-
-        # draw everything
-        self.batch.draw()
 
     def draw_line(self):
         '''
@@ -809,8 +809,8 @@ class CalibanWindow:
             if np.any(np.where(np.logical_or(bottom_piece == h1, bottom_piece == h2))):
                 r, g, b = self.red
                 self.thick_lines_batch.add(2, pyglet.gl.GL_LINES, None,
-                    ("v2f", (left, bottom-1,
-                         right+1, bottom-1)),
+                    ("v2f", (left, bottom-2,
+                         right+1, bottom-2)),
                     ("c3B", (r, g, b, r, g, b))
                 )
 
@@ -818,7 +818,7 @@ class CalibanWindow:
         if x1 == 0:
             r, g, b = self.white
             self.batch.add(2, pyglet.gl.GL_LINES, None,
-                ("v2f", (left, bottom -1,
+                ("v2f", (left, bottom-1,
                      left, top)),
                 ("c3B", (r, g, b, r, g, b))
             )
@@ -828,8 +828,8 @@ class CalibanWindow:
             if np.any(np.where(np.logical_or(left_piece == h1, left_piece == h2))):
                 r, g, b = self.red
                 self.thick_lines_batch.add(2, pyglet.gl.GL_LINES, None,
-                    ("v2f", (left, bottom -1,
-                         left, top)),
+                    ("v2f", (left-1, bottom-1,
+                         left-1, top)),
                     ("c3B", (r, g, b, r, g, b))
                 )
 
@@ -846,8 +846,8 @@ class CalibanWindow:
             if np.any(np.where(np.logical_or(right_piece == h1, right_piece == h2))):
                 r, g, b = self.red
                 self.thick_lines_batch.add(2, pyglet.gl.GL_LINES, None,
-                    ("v2f", (right+1, bottom-1,
-                         right+1, top)),
+                    ("v2f", (right+2, bottom-1,
+                         right+2, top)),
                     ("c3B", (r, g, b, r, g, b))
                 )
 
@@ -865,8 +865,8 @@ class CalibanWindow:
             if np.any(np.where(np.logical_or(top_piece == h1, top_piece == h2))):
                 r, g, b = self.red
                 self.thick_lines_batch.add(2, pyglet.gl.GL_LINES, None,
-                ("v2f", (left, top,
-                     right+1, top)),
+                ("v2f", (left, top+1,
+                     right+1, top+1)),
                 ("c3B", (r, g, b, r, g, b))
             )
 
