@@ -42,6 +42,7 @@ import tarfile
 import tempfile
 
 from io import BytesIO
+from scipy import ndimage
 from skimage.morphology import watershed, flood_fill, flood, dilation, disk, closing
 from skimage.draw import circle
 from skimage.measure import regionprops
@@ -1389,30 +1390,46 @@ class CalibanWindow:
         dy1, dy2, dx1, dx2 = self.comp_dy1, self.comp_dy2, self.comp_dx1, self.comp_dx2
 
         # get images to modify and overlay
-        current_raw = self.get_raw_current_frame()
         current_ann = self.get_ann_current_frame()[dy1:dy2, dx1:dx2]
         current_ann = np.ma.masked_equal(current_ann, 0)
+        current_raw = self.get_raw_current_frame()
 
         # apply adjustments to whole raw image, then index into it
         # (keeps image adjustments consistent even when updating small piece of image)
         raw_RGB = self.apply_raw_image_adjustments(current_raw)[dy1:dy2, dx1:dx2]
 
-        # get RGB array of colorful annotation view
-        ann_img = self.array_to_img(input_array = current_ann,
-                                            vmax = self.get_max_label() + self.adjustment,
-                                            cmap = self.labels_cmap,
-                                            output = 'array',
-                                            vmin = 0)
+        # make whole composite image: only need to generate where there are labels
+        if None in (dy1, dy2, dx1, dx2):
+            obj_list = ndimage.find_objects(current_ann)
+            self.composite_view = np.copy(raw_RGB)
+            for slice_obj in obj_list:
+                ann_img = self.array_to_img(input_array=current_ann[slice_obj],
+                                            vmax=self.get_max_label()+self.adjustment,
+                                            cmap=self.labels_cmap,
+                                            output='array',
+                                            vmin=0)[..., 0:3]
+                raw_piece = raw_RGB[slice_obj]
+                comp_piece = self.make_composite_img(base_array=raw_piece,
+                                                     overlay_array=ann_img)
+                self.composite_view[slice_obj] = comp_piece
 
-        # don't need alpha channel for compositing step
-        ann_RGB = ann_img[...,0:3]
+        else:
+            # get RGB array of colorful annotation view
+            ann_img = self.array_to_img(input_array = current_ann,
+                                                vmax = self.get_max_label() + self.adjustment,
+                                                cmap = self.labels_cmap,
+                                                output = 'array',
+                                                vmin = 0)
 
-        # create the composite image from the two RGB arrays
-        img_masked = self.make_composite_img(base_array = raw_RGB,
-                                            overlay_array = ann_RGB)
+            # don't need alpha channel for compositing step
+            ann_RGB = ann_img[...,0:3]
 
-        # set self.composite view to new composite image
-        self.composite_view[dy1:dy2, dx1:dx2] = img_masked
+            # create the composite image from the two RGB arrays
+            img_masked = self.make_composite_img(base_array = raw_RGB,
+                                                overlay_array = ann_RGB)
+
+            # set self.composite view to new composite image
+            self.composite_view[dy1:dy2, dx1:dx2] = img_masked
 
         # reset composite dirty rectangle
         self.comp_dy1, self.comp_dy2, self.comp_dx1, self.comp_dx2 = None, None, None, None
