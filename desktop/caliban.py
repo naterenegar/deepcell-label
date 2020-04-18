@@ -177,13 +177,21 @@ class CalibanWindow:
         # start with display showing annotations
         self.draw_raw = False
 
+        self.channel_adjustments = {}
+        for c in range(self.channel_max):
+            self.channel_adjustments[c] = {}
+            self.channel_adjustments[c]['invert'] = False
+            self.channel_adjustments[c]['sobel_on'] = False
+            self.channel_adjustments[c]['adapthist_on'] = False
+            self.channel_adjustments[c]['cmap'] = 0
+
         # IMAGE ADJUSTMENT TOGGLES
         # invert grayscale light/dark of raw image
-        self.invert = False
+        self.invert = self.channel_adjustments[0]['invert']
         # apply sobel filter (emphasizes edges) to raw image
-        self.sobel_on = False
+        self.sobel_on = self.channel_adjustments[0]['sobel_on']
         # apply adaptive histogram equalization to raw image
-        self.adapthist_on = False
+        self.adapthist_on = self.channel_adjustments[0]['adapthist_on']
         # show only raw image instead of composited image
         self.hide_annotations = False
 
@@ -202,7 +210,7 @@ class CalibanWindow:
         # has effect of showing contours in brightness of image
         self.cmap_options = ['cubehelix', 'gist_yarg', 'gist_gray', 'magma', 'nipy_spectral', 'prism']
         # start on cubehelix cmap
-        self.current_cmap_idx = 0
+        self.current_cmap_idx = self.channel_adjustments[0]['cmap']
         self.current_cmap = self.cmap_options[self.current_cmap_idx]
 
         # composite_view used to store RGB image (composite of raw and annotated) so it can be
@@ -2014,7 +2022,8 @@ class TrackReview(CalibanWindow):
         # `label` should appear first
         self.display_info = ["label", *sorted(set(self.tracks[1]) - {"label"})]
 
-        self.num_frames, self.height, self.width, _ = raw.shape
+        # only ever one channel
+        self.num_frames, self.height, self.width, self.channel_max = raw.shape
         self.dtype_raw = raw.dtype
 
         super().__init__()
@@ -3706,6 +3715,7 @@ class ZStackReview(CalibanWindow):
             # INVERT RAW IMAGE LIGHT/DARK
             if symbol == key.I:
                 self.invert = not self.invert
+                self.channel_adjustments[self.channel]['invert'] = self.invert
                 # if you invert the image while you're viewing composite, update composite
                 if not self.hide_annotations:
                     self.helper_update_composite()
@@ -3714,6 +3724,7 @@ class ZStackReview(CalibanWindow):
             # TOGGLE SOBEL FILTER
             if symbol == key.K:
                 self.sobel_on = not self.sobel_on
+                self.channel_adjustments[self.channel]['sobel_on'] = self.sobel_on
                 if not self.hide_annotations:
                     self.helper_update_composite()
                 self.update_image = True
@@ -3721,6 +3732,7 @@ class ZStackReview(CalibanWindow):
             # TOGGLE ADAPTIVE HISTOGRAM EQUALIZATION
             if symbol == key.J:
                 self.adapthist_on = not self.adapthist_on
+                self.channel_adjustments[self.channel]['adapthist_on'] = self.adapthist_on
                 if not self.hide_annotations:
                     self.helper_update_composite()
                 self.update_image = True
@@ -3732,6 +3744,7 @@ class ZStackReview(CalibanWindow):
                         self.current_cmap_idx = 0
                     elif self.current_cmap_idx < len(self.cmap_options) - 1:
                         self.current_cmap_idx += 1
+                    self.channel_adjustments[self.channel]['cmap'] = self.current_cmap_idx
                     self.current_cmap = self.cmap_options[self.current_cmap_idx]
                 else:
                     self.current_label_cmap_idx = (self.current_label_cmap_idx + 1) % 2
@@ -3744,6 +3757,7 @@ class ZStackReview(CalibanWindow):
                         self.current_cmap_idx = len(self.cmap_options) - 1
                     elif self.current_cmap_idx > 0:
                         self.current_cmap_idx -= 1
+                    self.channel_adjustments[self.channel]['cmap'] = self.current_cmap_idx
                     self.current_cmap = self.cmap_options[self.current_cmap_idx]
                 else:
                     self.current_label_cmap_idx = (self.current_label_cmap_idx + 1) % 2
@@ -4073,6 +4087,12 @@ class ZStackReview(CalibanWindow):
         # in this case we only need to update self.max_intensity
         self.max_intensity = self.max_intensity_dict[self.channel]
         self.vmin = self.min_intensity_dict[self.channel]
+        self.invert = self.channel_adjustments[self.channel]['invert']
+        self.sobel_on = self.channel_adjustments[self.channel]['sobel_on']
+        self.adapthist_on = self.channel_adjustments[self.channel]['adapthist_on']
+        self.current_cmap_idx = self.channel_adjustments[self.channel]['cmap']
+        self.current_cmap = self.cmap_options[self.current_cmap_idx]
+
         if self.draw_raw:
             self.update_image = True
 
