@@ -187,8 +187,13 @@ class CalibanWindow:
         self.hide_annotations = False
 
         # set cmap for labels here (easier to set_bad just once)
-        self.labels_cmap = plt.get_cmap("viridis")
-        self.labels_cmap.set_bad('black')
+        viridis = plt.get_cmap('viridis')
+        viridis.set_bad('black')
+        prism = plt.get_cmap('prism')
+        prism.set_bad('black')
+        self.labels_cmap_options = [viridis, prism]
+        self.current_label_cmap_idx = 0
+        self.labels_cmap = self.labels_cmap_options[self.current_label_cmap_idx]
 
         # options for displaying raw image with different cmaps
         # cubehelix varies smoothly in lightness and hue, gist_yarg and gist_gray are grayscale
@@ -1263,6 +1268,10 @@ class CalibanWindow:
         Currently requires that child class include attributes
         highlighted_cell_one and highlighted_cell_two.
         '''
+        # different highlight color depending on cmap
+        colors = [[255, 0, 0], [255, 255, 255]]
+        h_color = colors[self.current_label_cmap_idx]
+
         # same highlight gets applied to up to two labels
         mask = np.logical_or(frame == self.highlighted_cell_one, frame == self.highlighted_cell_two)
         # add channels dimension into mask
@@ -1270,7 +1279,7 @@ class CalibanWindow:
         # only work with RGB, not potential alpha channel
         RGB_frame = RGB_frame[:,:,0:3]
         # change RGB values to red wherever mask applies, leave untouched otherwise
-        RGB_frame = np.where(mask, [255, 0,0], RGB_frame)
+        RGB_frame = np.where(mask, h_color, RGB_frame)
 
         return RGB_frame.astype(np.uint8)
 
@@ -3699,22 +3708,30 @@ class ZStackReview(CalibanWindow):
                     self.helper_update_composite()
                 self.update_image = True
 
-            if modifiers & key.MOD_SHIFT:
-                if symbol == key.UP:
+        if modifiers & key.MOD_SHIFT:
+            if symbol == key.UP:
+                if self.draw_raw:
                     if self.current_cmap_idx == len(self.cmap_options) - 1:
                         self.current_cmap_idx = 0
                     elif self.current_cmap_idx < len(self.cmap_options) - 1:
                         self.current_cmap_idx += 1
                     self.current_cmap = self.cmap_options[self.current_cmap_idx]
-                    self.update_image = True
+                else:
+                    self.current_label_cmap_idx = (self.current_label_cmap_idx + 1) % 2
+                    self.labels_cmap = self.labels_cmap_options[self.current_label_cmap_idx]
+            self.update_image = True
 
-                if symbol == key.DOWN:
+            if symbol == key.DOWN:
+                if self.draw_raw:
                     if self.current_cmap_idx == 0:
                         self.current_cmap_idx = len(self.cmap_options) - 1
                     elif self.current_cmap_idx > 0:
                         self.current_cmap_idx -= 1
                     self.current_cmap = self.cmap_options[self.current_cmap_idx]
-                    self.update_image = True
+                else:
+                    self.current_label_cmap_idx = (self.current_label_cmap_idx + 1) % 2
+                    self.labels_cmap = self.labels_cmap_options[self.current_label_cmap_idx]
+            self.update_image = True
 
     def label_mode_none_keypress_helper(self, symbol, modifiers):
         '''
