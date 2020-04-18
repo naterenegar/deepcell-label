@@ -42,7 +42,7 @@ import tarfile
 import tempfile
 
 from io import BytesIO
-from skimage.morphology import watershed, flood_fill, flood, dilation, disk
+from skimage.morphology import watershed, flood_fill, flood, dilation, disk, closing
 from skimage.draw import circle
 from skimage.measure import regionprops
 from skimage.exposure import rescale_intensity, equalize_adapthist
@@ -4352,6 +4352,8 @@ class ZStackReview(CalibanWindow):
         # apply new_label to areas of threshold that are True (foreground),
         # 0 for False (background)
         ann_threshold = np.where(hyst, new_label, 0)
+        # smooths out "feathered" edges
+        ann_threshold = closing(ann_threshold, disk(3))
 
         #put prediction in without overwriting
         predict_area = self.annotated[self.current_frame, y1:y2, x1:x2, self.feature]
