@@ -744,6 +744,7 @@ class CalibanWindow:
         self.window.clear()
 
         self.batch = pyglet.graphics.Batch()
+        self.thick_lines_batch = pyglet.graphics.Batch()
 
         # add relevant image to batch
         self.draw_current_frame()
@@ -751,6 +752,10 @@ class CalibanWindow:
         self.draw_line()
         # add information text in sidebar to batch
         self.draw_label()
+
+        gl.glLineWidth(3)
+        self.thick_lines_batch.draw()
+        gl.glLineWidth(1)
 
         # draw everything
         self.batch.draw()
@@ -793,67 +798,77 @@ class CalibanWindow:
         # bottom line
         if y2 == self.height:
             r, g, b = self.white
+            self.batch.add(2, pyglet.gl.GL_LINES, None,
+                ("v2f", (left, bottom-1,
+                     right+1, bottom-1)),
+                ("c3B", (r, g, b, r, g, b))
+            )
+
         else:
             bottom_piece = self.get_ann_current_frame()[y2:self.height]
             if np.any(np.where(np.logical_or(bottom_piece == h1, bottom_piece == h2))):
                 r, g, b = self.red
-            else:
-                r, g, b = self.black
-
-        self.bottom_vlist = self.batch.add(2, pyglet.gl.GL_LINES, None,
-            ("v2f", (left, bottom-1,
-                 right+1, bottom-1)),
-            ("c3B", (r, g, b, r, g, b))
-        )
+                self.thick_lines_batch.add(2, pyglet.gl.GL_LINES, None,
+                    ("v2f", (left, bottom-1,
+                         right+1, bottom-1)),
+                    ("c3B", (r, g, b, r, g, b))
+                )
 
         # left line
         if x1 == 0:
             r, g, b = self.white
+            self.batch.add(2, pyglet.gl.GL_LINES, None,
+                ("v2f", (left, bottom -1,
+                     left, top)),
+                ("c3B", (r, g, b, r, g, b))
+            )
+
         else:
             left_piece = self.get_ann_current_frame()[:,0:x1]
             if np.any(np.where(np.logical_or(left_piece == h1, left_piece == h2))):
                 r, g, b = self.red
-            else:
-                r, g, b = self.black
-
-        self.left_vlist = self.batch.add(2, pyglet.gl.GL_LINES, None,
-            ("v2f", (left, bottom -1,
-                 left, top)),
-            ("c3B", (r, g, b, r, g, b))
-        )
+                self.thick_lines_batch.add(2, pyglet.gl.GL_LINES, None,
+                    ("v2f", (left, bottom -1,
+                         left, top)),
+                    ("c3B", (r, g, b, r, g, b))
+                )
 
         # right line
         if x2 == self.width:
             r, g, b = self.white
+            self.batch.add(2, pyglet.gl.GL_LINES, None,
+                ("v2f", (right+1, bottom-1,
+                     right+1, top)),
+                ("c3B", (r, g, b, r, g, b))
+            )
         else:
             right_piece = self.get_ann_current_frame()[:,x2:self.width]
             if np.any(np.where(np.logical_or(right_piece == h1, right_piece == h2))):
                 r, g, b = self.red
-            else:
-                r, g, b = self.black
-
-        self.right_vlist = self.batch.add(2, pyglet.gl.GL_LINES, None,
-            ("v2f", (right+1, bottom-1,
-                 right+1, top)),
-            ("c3B", (r, g, b, r, g, b))
-        )
+                self.thick_lines_batch.add(2, pyglet.gl.GL_LINES, None,
+                    ("v2f", (right+1, bottom-1,
+                         right+1, top)),
+                    ("c3B", (r, g, b, r, g, b))
+                )
 
         # top line
         if y1 == 0:
             r, g, b = self.white
+            self.batch.add(2, pyglet.gl.GL_LINES, None,
+                ("v2f", (left, top,
+                     right+1, top)),
+                ("c3B", (r, g, b, r, g, b))
+            )
         # check to see if values are outside this range
         else:
             top_piece = self.get_ann_current_frame()[0:y1]
             if np.any(np.where(np.logical_or(top_piece == h1, top_piece == h2))):
                 r, g, b = self.red
-            else:
-                r, g, b = self.black
-
-        self.top_vlist = self.batch.add(2, pyglet.gl.GL_LINES, None,
-            ("v2f", (left, top,
-                 right+1, top)),
-            ("c3B", (r, g, b, r, g, b))
-        )
+                self.thick_lines_batch.add(2, pyglet.gl.GL_LINES, None,
+                ("v2f", (left, top,
+                     right+1, top)),
+                ("c3B", (r, g, b, r, g, b))
+            )
 
     def draw_current_frame(self):
         '''
