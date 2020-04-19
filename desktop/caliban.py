@@ -1411,15 +1411,16 @@ class CalibanWindow:
             obj_list = ndimage.find_objects(current_ann)
             self.composite_view = np.copy(raw_RGB)
             for slice_obj in obj_list:
-                ann_img = self.array_to_img(input_array=current_ann[slice_obj],
-                                            vmax=self.get_max_label()+self.adjustment,
-                                            cmap=self.labels_cmap,
-                                            output='array',
-                                            vmin=0)[..., 0:3]
-                raw_piece = raw_RGB[slice_obj]
-                comp_piece = self.make_composite_img(base_array=raw_piece,
-                                                     overlay_array=ann_img)
-                self.composite_view[slice_obj] = comp_piece
+                if slice_obj is not None:
+                    ann_img = self.array_to_img(input_array=current_ann[slice_obj],
+                                                vmax=self.get_max_label()+self.adjustment,
+                                                cmap=self.labels_cmap,
+                                                output='array',
+                                                vmin=0)[..., 0:3]
+                    raw_piece = raw_RGB[slice_obj]
+                    comp_piece = self.make_composite_img(base_array=raw_piece,
+                                                         overlay_array=ann_img)
+                    self.composite_view[slice_obj] = comp_piece
 
         else:
             # get RGB array of colorful annotation view
