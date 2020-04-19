@@ -1250,7 +1250,7 @@ class CalibanWindow:
 
         return RGB_frame.astype(np.uint8)
 
-    def apply_raw_image_adjustments(self, current_raw, cmap = 'gray'):
+    def apply_raw_image_adjustments(self, current_raw, cmap='gray', rgb=True):
         '''
         Apply filter/adjustment options to raw image for display in
         pixel-editing mode. Input is unadjusted raw image, with object
@@ -1277,15 +1277,20 @@ class CalibanWindow:
             vmin = self.vmin
             vmax = self.max_intensity
 
-        # want image to be in grayscale, but as RGB array, not array of intensities
-        raw_img =  self.array_to_img(input_array = current_raw,
-                    vmax = vmax,
-                    cmap = cmap,
-                    output = 'array',
-                    vmin = vmin)
+        if rgb:
+            # want image to be in grayscale, but as RGB array, not array of intensities
+            raw_img =  self.array_to_img(input_array = current_raw,
+                        vmax = vmax,
+                        cmap = cmap,
+                        output = 'array',
+                        vmin = vmin)
 
-        # don't need alpha channel
-        raw_RGB = raw_img[:,:,0:3]
+            # don't need alpha channel
+            raw_RGB = raw_img[:,:,0:3]
+
+        # for thresholding
+        else:
+            raw_RGB = Normalize(vmin=vmin, vmax=vmax)(current_raw)
 
         # apply dark/light inversion
         if self.invert:
@@ -3162,6 +3167,7 @@ class ZStackReview(CalibanWindow):
         self.current_cmap = self.cmap_options[self.current_cmap_idx]
 
         self.brush = CalibanBrush(self.height, self.width)
+        self.threshold_flag = ''
 
         # stores y, x location of mouse click for actions that use skimage flooding
         # self.hole_fill_seed = None
@@ -3575,6 +3581,10 @@ class ZStackReview(CalibanWindow):
             self.brush.disable_drawing()
             self.brush.clear_view()
             self.update_image = True
+            if (modifiers & key.MOD_CTRL):
+                self.threshold_flag = 'adjust'
+            else:
+                self.threshold_flag = ''
 
     def edit_mode_misc_keypress_helper(self, symbol, modifiers):
         '''
@@ -4334,8 +4344,12 @@ class ZStackReview(CalibanWindow):
             self.add_cell_info to update cell_info if a label is added
         '''
 
-        # pull out the selection portion of the raw frame
-        predict_area = self.raw[self.current_frame, y1:y2, x1:x2, self.channel]
+        if self.threshold_flag == 'adjust':
+            current_raw = self.raw[self.current_frame, :, :, self.channel]
+            predict_area = self.apply_raw_image_adjustments(current_raw, rgb=False)[y1:y2, x1:x2]
+        else:
+            # pull out the selection portion of the raw frame
+            predict_area = self.raw[self.current_frame, y1:y2, x1:x2, self.channel]
 
         # triangle threshold picked after trying a few on one dataset
         # may not be the best threshold approach for other datasets!
