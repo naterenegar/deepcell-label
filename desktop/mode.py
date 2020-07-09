@@ -112,6 +112,11 @@ class Mode:
                 text = ("\nTrim unconnected pixels away from selected region of label {} in frame {}?"
                     "\n{}").format(self.label, self.frame, answer)
 
+            elif self.action == "EROSION DILATION":
+                text = ("\nIncrementally change size of label {} in frame {}?"
+                    "\nT = SHRINK LABEL"
+                    "\nY = EXPAND LABEL").format(self.label, self.frame)
+
             elif self.action == "DELETE":
                 text = ("\nDelete label {} in frame {}?"
                     "\n{}").format(self.label, self.frame, answer)
