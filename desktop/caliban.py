@@ -2585,6 +2585,10 @@ class TrackReview(CalibanWindow):
         if symbol == key.X:
             self.mode.update("QUESTION", action="DELETE", **self.mode.info)
 
+        # CHANGE SIZE INCREMENTALLY
+        if symbol == key.Y:
+            self.mode.update("QUESTION", action="EROSION DILATION", **self.mode.info)
+
     def label_mode_multiple_keypress_helper(self, symbol, modifiers):
         '''
         Helper function for keypress handling. The keybinds that are
@@ -2685,6 +2689,15 @@ class TrackReview(CalibanWindow):
         elif self.mode.action == "PARENT":
             if symbol == key.SPACE:
                 self.action_parent()
+                self.mode.clear()
+
+        # RESPOND TO MORPHOLOGICAL EROSION OR DILATION QUESTION
+        elif self.mode.action == "EROSION DILATION":
+            if symbol == key.Y:
+                self.action_dilate_label()
+                self.mode.clear()
+            elif symbol == key.T:
+                self.action_erode_label()
                 self.mode.clear()
 
     def custom_prompt(self):
@@ -3035,6 +3048,50 @@ class TrackReview(CalibanWindow):
 
         # reset hole fill seed
         self.hole_fill_seed = None
+
+        self.update_image = True
+
+    def action_erode_label(self):
+        '''
+        Use morphological erosion to incrementally shrink the selected label.
+        '''
+
+        frame = self.mode.frame
+        label = self.mode.label
+        img_ann = self.tracked[frame,:,:,0]
+
+        # if label is adjacent to another label, don't let that interfere
+        img_erode = np.where(img_ann==label, label, 0)
+        # erode the label
+        img_erode = erosion(img_erode, square(3))
+
+        # put the label back in
+        img_ann = np.where(img_ann==label, img_erode, img_ann)
+
+        in_modified = np.any(np.isin(img_ann, label))
+        if not in_modified:
+            self.del_cell_info(del_label = label, frame = frame)
+
+        self.tracked[frame,:,:,0] = img_ann
+
+        self.update_image = True
+
+    def action_dilate_label(self):
+        '''
+        Use morphological dilation to incrementally increase the selected label.
+        Does not overwrite bordering labels.
+        '''
+
+        frame = self.mode.frame
+        label = self.mode.label
+        img_ann = self.tracked[frame,:,:,0]
+
+        img_dilate = np.where(img_ann==label, label, 0)
+        img_dilate = dilation(img_dilate, square(3))
+
+        img_ann = np.where(np.logical_and(img_dilate==label, img_ann==0), img_dilate, img_ann)
+
+        self.tracked[frame,:,:,0] = img_ann
 
         self.update_image = True
 
