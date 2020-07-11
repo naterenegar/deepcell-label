@@ -6074,19 +6074,13 @@ class RGBNpz(CalibanWindow):
         '''
         display_text = "Displayed image: "
 
-        if self.edit_mode:
-            if self.hide_annotations:
-                currently_viewing = "Raw"
+        if self.draw_raw:
+            currently_viewing = "Raw"
+        else:
+            if not (self.show_label_outlines or self.edit_mode):
+                currently_viewing = "Labels"
             else:
                 currently_viewing = "Overlay"
-        else:
-            if self.draw_raw:
-                currently_viewing = "Raw"
-            else:
-                if self.show_label_outlines:
-                    currently_viewing = "Overlay"
-                else:
-                    currently_viewing = "Labels"
 
         display_text += currently_viewing
 
