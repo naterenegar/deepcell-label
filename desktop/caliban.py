@@ -5809,6 +5809,15 @@ class RGBNpz(CalibanWindow):
             if symbol == key.L:
                 self.show_label_outlines = not self.show_label_outlines
                 self.update_image = True
+            if not self.show_label_outlines and (modifiers & key.MOD_SHIFT):
+                if symbol == key.UP:
+                    self.current_label_cmap_idx = (self.current_label_cmap_idx + 1) % 2
+                    self.labels_cmap = self.labels_cmap_options[self.current_label_cmap_idx]
+                    self.update_image = True
+                elif symbol == key.DOWN:
+                    self.current_label_cmap_idx = (self.current_label_cmap_idx - 1) % 2
+                    self.labels_cmap = self.labels_cmap_options[self.current_label_cmap_idx]
+                    self.update_image = True
 
     def label_mode_none_keypress_helper(self, symbol, modifiers):
         '''
@@ -6065,7 +6074,16 @@ class RGBNpz(CalibanWindow):
         return ", ".join(colors)
 
     def create_cmap_text(self):
-        return ""
+        cmap_text = ""
+        if self.draw_raw:
+            cmap_text = "RGB"
+        else:
+            if not (self.show_label_outlines or self.edit_mode):
+                cmap_text = "{}".format(self.labels_cmap.name)
+            else:
+                cmap_text = "RGB/outlines"
+
+        return cmap_text
 
     def create_disp_image_text(self):
         '''
@@ -6152,7 +6170,7 @@ class RGBNpz(CalibanWindow):
             filter_info = "\n\n\n"
 
         display_filter_info = "Current display settings:"
-        display_filter_info += self.create_cmap_text()
+        display_filter_info += "\nColormap - {}".format(self.create_cmap_text())
         display_filter_info += filter_info
 
         # TODO: render label in a batch
