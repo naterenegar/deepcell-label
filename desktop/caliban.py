@@ -43,7 +43,8 @@ import tarfile
 import tempfile
 
 from io import BytesIO
-from skimage.morphology import watershed, flood_fill, flood, dilation, disk
+from scipy import ndimage
+from skimage.morphology import watershed, flood_fill, flood, dilation, disk, square, closing, erosion
 from skimage.draw import circle
 from skimage.measure import regionprops
 from skimage.exposure import rescale_intensity, equalize_adapthist
@@ -177,19 +178,41 @@ class CalibanWindow:
         # start with display showing annotations
         self.draw_raw = False
 
+        self.channel_adjustments = {}
+        for c in range(self.channel_max):
+            self.channel_adjustments[c] = {}
+            self.channel_adjustments[c]['invert'] = False
+            self.channel_adjustments[c]['sobel_on'] = False
+            self.channel_adjustments[c]['adapthist_on'] = False
+            self.channel_adjustments[c]['cmap'] = 0
+
         # IMAGE ADJUSTMENT TOGGLES
         # invert grayscale light/dark of raw image
-        self.invert = False
+        self.invert = self.channel_adjustments[0]['invert']
         # apply sobel filter (emphasizes edges) to raw image
-        self.sobel_on = False
+        self.sobel_on = self.channel_adjustments[0]['sobel_on']
         # apply adaptive histogram equalization to raw image
-        self.adapthist_on = False
+        self.adapthist_on = self.channel_adjustments[0]['adapthist_on']
         # show only raw image instead of composited image
         self.hide_annotations = False
 
         # set cmap for labels here (easier to set_bad just once)
-        self.labels_cmap = plt.get_cmap("viridis")
-        self.labels_cmap.set_bad('black')
+        viridis = plt.get_cmap('viridis')
+        viridis.set_bad('black')
+        prism = plt.get_cmap('prism')
+        prism.set_bad('black')
+        self.labels_cmap_options = [viridis, prism]
+        self.current_label_cmap_idx = 0
+        self.labels_cmap = self.labels_cmap_options[self.current_label_cmap_idx]
+
+        # options for displaying raw image with different cmaps
+        # cubehelix varies smoothly in lightness and hue, gist_yarg and gist_gray are grayscale
+        # and inverted grayscale, magma and nipy_spectral are alternatives to cubehelix, and prism
+        # has effect of showing contours in brightness of image
+        self.cmap_options = ['cubehelix', 'gist_yarg', 'gist_gray', 'magma', 'nipy_spectral', 'prism']
+        # start on cubehelix cmap
+        self.current_cmap_idx = self.channel_adjustments[0]['cmap']
+        self.current_cmap = self.cmap_options[self.current_cmap_idx]
 
         # composite_view used to store RGB image (composite of raw and annotated) so it can be
         # accessed and updated as needed
@@ -745,6 +768,7 @@ class CalibanWindow:
         self.window.clear()
 
         self.batch = pyglet.graphics.Batch()
+        self.thick_lines_batch = pyglet.graphics.Batch()
 
         # add relevant image to batch
         self.draw_current_frame()
@@ -755,6 +779,10 @@ class CalibanWindow:
 
         # draw everything
         self.batch.draw()
+
+        gl.glLineWidth(3)
+        self.thick_lines_batch.draw()
+        gl.glLineWidth(1)
 
     def draw_line(self):
         '''
@@ -794,67 +822,77 @@ class CalibanWindow:
         # bottom line
         if y2 == self.height:
             r, g, b = self.white
+            self.batch.add(2, pyglet.gl.GL_LINES, None,
+                ("v2f", (left, bottom-1,
+                     right+1, bottom-1)),
+                ("c3B", (r, g, b, r, g, b))
+            )
+
         else:
             bottom_piece = self.get_ann_current_frame()[y2:self.height]
             if np.any(np.where(np.logical_or(bottom_piece == h1, bottom_piece == h2))):
                 r, g, b = self.red
-            else:
-                r, g, b = self.black
-
-        self.bottom_vlist = self.batch.add(2, pyglet.gl.GL_LINES, None,
-            ("v2f", (left, bottom-1,
-                 right+1, bottom-1)),
-            ("c3B", (r, g, b, r, g, b))
-        )
+                self.thick_lines_batch.add(2, pyglet.gl.GL_LINES, None,
+                    ("v2f", (left, bottom-2,
+                         right+1, bottom-2)),
+                    ("c3B", (r, g, b, r, g, b))
+                )
 
         # left line
         if x1 == 0:
             r, g, b = self.white
+            self.batch.add(2, pyglet.gl.GL_LINES, None,
+                ("v2f", (left, bottom-1,
+                     left, top)),
+                ("c3B", (r, g, b, r, g, b))
+            )
+
         else:
             left_piece = self.get_ann_current_frame()[:,0:x1]
             if np.any(np.where(np.logical_or(left_piece == h1, left_piece == h2))):
                 r, g, b = self.red
-            else:
-                r, g, b = self.black
-
-        self.left_vlist = self.batch.add(2, pyglet.gl.GL_LINES, None,
-            ("v2f", (left, bottom -1,
-                 left, top)),
-            ("c3B", (r, g, b, r, g, b))
-        )
+                self.thick_lines_batch.add(2, pyglet.gl.GL_LINES, None,
+                    ("v2f", (left-1, bottom-1,
+                         left-1, top)),
+                    ("c3B", (r, g, b, r, g, b))
+                )
 
         # right line
         if x2 == self.width:
             r, g, b = self.white
+            self.batch.add(2, pyglet.gl.GL_LINES, None,
+                ("v2f", (right+1, bottom-1,
+                     right+1, top)),
+                ("c3B", (r, g, b, r, g, b))
+            )
         else:
             right_piece = self.get_ann_current_frame()[:,x2:self.width]
             if np.any(np.where(np.logical_or(right_piece == h1, right_piece == h2))):
                 r, g, b = self.red
-            else:
-                r, g, b = self.black
-
-        self.right_vlist = self.batch.add(2, pyglet.gl.GL_LINES, None,
-            ("v2f", (right+1, bottom-1,
-                 right+1, top)),
-            ("c3B", (r, g, b, r, g, b))
-        )
+                self.thick_lines_batch.add(2, pyglet.gl.GL_LINES, None,
+                    ("v2f", (right+2, bottom-1,
+                         right+2, top)),
+                    ("c3B", (r, g, b, r, g, b))
+                )
 
         # top line
         if y1 == 0:
             r, g, b = self.white
+            self.batch.add(2, pyglet.gl.GL_LINES, None,
+                ("v2f", (left, top,
+                     right+1, top)),
+                ("c3B", (r, g, b, r, g, b))
+            )
         # check to see if values are outside this range
         else:
             top_piece = self.get_ann_current_frame()[0:y1]
             if np.any(np.where(np.logical_or(top_piece == h1, top_piece == h2))):
                 r, g, b = self.red
-            else:
-                r, g, b = self.black
-
-        self.top_vlist = self.batch.add(2, pyglet.gl.GL_LINES, None,
-            ("v2f", (left, top,
-                 right+1, top)),
-            ("c3B", (r, g, b, r, g, b))
-        )
+                self.thick_lines_batch.add(2, pyglet.gl.GL_LINES, None,
+                ("v2f", (left, top+1,
+                     right+1, top+1)),
+                ("c3B", (r, g, b, r, g, b))
+            )
 
     def draw_current_frame(self):
         '''
@@ -1240,6 +1278,10 @@ class CalibanWindow:
         Currently requires that child class include attributes
         highlighted_cell_one and highlighted_cell_two.
         '''
+        # different highlight color depending on cmap
+        colors = [[255, 0, 0], [255, 255, 255]]
+        h_color = colors[self.current_label_cmap_idx]
+
         # same highlight gets applied to up to two labels
         mask = np.logical_or(frame == self.highlighted_cell_one, frame == self.highlighted_cell_two)
         # add channels dimension into mask
@@ -1247,11 +1289,11 @@ class CalibanWindow:
         # only work with RGB, not potential alpha channel
         RGB_frame = RGB_frame[:,:,0:3]
         # change RGB values to red wherever mask applies, leave untouched otherwise
-        RGB_frame = np.where(mask, [255, 0,0], RGB_frame)
+        RGB_frame = np.where(mask, h_color, RGB_frame)
 
         return RGB_frame.astype(np.uint8)
 
-    def apply_raw_image_adjustments(self, current_raw, cmap = 'gray'):
+    def apply_raw_image_adjustments(self, current_raw, cmap='gray', rgb=True):
         '''
         Apply filter/adjustment options to raw image for display in
         pixel-editing mode. Input is unadjusted raw image, with object
@@ -1278,15 +1320,20 @@ class CalibanWindow:
             vmin = self.vmin
             vmax = self.max_intensity
 
-        # want image to be in grayscale, but as RGB array, not array of intensities
-        raw_img =  self.array_to_img(input_array = current_raw,
-                    vmax = vmax,
-                    cmap = cmap,
-                    output = 'array',
-                    vmin = vmin)
+        if rgb:
+            # want image to be in grayscale, but as RGB array, not array of intensities
+            raw_img =  self.array_to_img(input_array = current_raw,
+                        vmax = vmax,
+                        cmap = cmap,
+                        output = 'array',
+                        vmin = vmin)
 
-        # don't need alpha channel
-        raw_RGB = raw_img[:,:,0:3]
+            # don't need alpha channel
+            raw_RGB = raw_img[:,:,0:3]
+
+        # for thresholding
+        else:
+            raw_RGB = Normalize(vmin=vmin, vmax=vmax)(current_raw)
 
         # apply dark/light inversion
         if self.invert:
@@ -1352,30 +1399,47 @@ class CalibanWindow:
         dy1, dy2, dx1, dx2 = self.comp_dy1, self.comp_dy2, self.comp_dx1, self.comp_dx2
 
         # get images to modify and overlay
-        current_raw = self.get_raw_current_frame()
         current_ann = self.get_ann_current_frame()[dy1:dy2, dx1:dx2]
         current_ann = np.ma.masked_equal(current_ann, 0)
+        current_raw = self.get_raw_current_frame()
 
         # apply adjustments to whole raw image, then index into it
         # (keeps image adjustments consistent even when updating small piece of image)
         raw_RGB = self.apply_raw_image_adjustments(current_raw)[dy1:dy2, dx1:dx2]
 
-        # get RGB array of colorful annotation view
-        ann_img = self.array_to_img(input_array = current_ann,
-                                            vmax = self.get_max_label() + self.adjustment,
-                                            cmap = self.labels_cmap,
-                                            output = 'array',
-                                            vmin = 0)
+        # make whole composite image: only need to generate where there are labels
+        if None in (dy1, dy2, dx1, dx2):
+            obj_list = ndimage.find_objects(current_ann)
+            self.composite_view = np.copy(raw_RGB)
+            for slice_obj in obj_list:
+                if slice_obj is not None:
+                    ann_img = self.array_to_img(input_array=current_ann[slice_obj],
+                                                vmax=self.get_max_label()+self.adjustment,
+                                                cmap=self.labels_cmap,
+                                                output='array',
+                                                vmin=0)[..., 0:3]
+                    raw_piece = raw_RGB[slice_obj]
+                    comp_piece = self.make_composite_img(base_array=raw_piece,
+                                                         overlay_array=ann_img)
+                    self.composite_view[slice_obj] = comp_piece
 
-        # don't need alpha channel for compositing step
-        ann_RGB = ann_img[...,0:3]
+        else:
+            # get RGB array of colorful annotation view
+            ann_img = self.array_to_img(input_array = current_ann,
+                                                vmax = self.get_max_label() + self.adjustment,
+                                                cmap = self.labels_cmap,
+                                                output = 'array',
+                                                vmin = 0)
 
-        # create the composite image from the two RGB arrays
-        img_masked = self.make_composite_img(base_array = raw_RGB,
-                                            overlay_array = ann_RGB)
+            # don't need alpha channel for compositing step
+            ann_RGB = ann_img[...,0:3]
 
-        # set self.composite view to new composite image
-        self.composite_view[dy1:dy2, dx1:dx2] = img_masked
+            # create the composite image from the two RGB arrays
+            img_masked = self.make_composite_img(base_array = raw_RGB,
+                                                overlay_array = ann_RGB)
+
+            # set self.composite view to new composite image
+            self.composite_view[dy1:dy2, dx1:dx2] = img_masked
 
         # reset composite dirty rectangle
         self.comp_dy1, self.comp_dy2, self.comp_dx1, self.comp_dx2 = None, None, None, None
@@ -1528,12 +1592,12 @@ class CalibanWindow:
             if self.hide_annotations:
                 cmap = "gray"
             else:
-                cmap = "viridis/gray"
+                cmap = "{}/gray".format(self.labels_cmap.name)
         else:
             if self.draw_raw:
                 cmap = self.current_cmap
             else:
-                cmap = "viridis"
+                cmap = self.labels_cmap.name
 
         return cmap
 
@@ -1960,7 +2024,8 @@ class TrackReview(CalibanWindow):
         # `label` should appear first
         self.display_info = ["label", *sorted(set(self.tracks[1]) - {"label"})]
 
-        self.num_frames, self.height, self.width, _ = raw.shape
+        # only ever one channel
+        self.num_frames, self.height, self.width, self.channel_max = raw.shape
         self.dtype_raw = raw.dtype
 
         super().__init__()
@@ -1975,15 +2040,6 @@ class TrackReview(CalibanWindow):
         self.highlight = False
         self.highlighted_cell_one = -1
         self.highlighted_cell_two = -1
-
-        # options for displaying raw image with different cmaps
-        # cubehelix varies smoothly in lightness and hue, gist_yarg and gist_gray are grayscale
-        # and inverted grayscale, magma and nipy_spectral are alternatives to cubehelix, and prism
-        # has effect of showing contours in brightness of image
-        self.cmap_options = ['cubehelix', 'gist_yarg', 'gist_gray', 'magma', 'nipy_spectral', 'prism']
-        # start on cubehelix cmap
-        self.current_cmap_idx = 0
-        self.current_cmap = self.cmap_options[self.current_cmap_idx]
 
         self.hole_fill_seed = None
 
@@ -2530,6 +2586,10 @@ class TrackReview(CalibanWindow):
         if symbol == key.X:
             self.mode.update("QUESTION", action="DELETE", **self.mode.info)
 
+        # CHANGE SIZE INCREMENTALLY
+        if symbol == key.Y:
+            self.mode.update("QUESTION", action="EROSION DILATION", **self.mode.info)
+
     def label_mode_multiple_keypress_helper(self, symbol, modifiers):
         '''
         Helper function for keypress handling. The keybinds that are
@@ -2630,6 +2690,15 @@ class TrackReview(CalibanWindow):
         elif self.mode.action == "PARENT":
             if symbol == key.SPACE:
                 self.action_parent()
+                self.mode.clear()
+
+        # RESPOND TO MORPHOLOGICAL EROSION OR DILATION QUESTION
+        elif self.mode.action == "EROSION DILATION":
+            if symbol == key.Y:
+                self.action_dilate_label()
+                self.mode.clear()
+            elif symbol == key.T:
+                self.action_erode_label()
                 self.mode.clear()
 
     def custom_prompt(self):
@@ -2983,6 +3052,50 @@ class TrackReview(CalibanWindow):
 
         self.update_image = True
 
+    def action_erode_label(self):
+        '''
+        Use morphological erosion to incrementally shrink the selected label.
+        '''
+
+        frame = self.mode.frame
+        label = self.mode.label
+        img_ann = self.tracked[frame,:,:,0]
+
+        # if label is adjacent to another label, don't let that interfere
+        img_erode = np.where(img_ann==label, label, 0)
+        # erode the label
+        img_erode = erosion(img_erode, square(3))
+
+        # put the label back in
+        img_ann = np.where(img_ann==label, img_erode, img_ann)
+
+        in_modified = np.any(np.isin(img_ann, label))
+        if not in_modified:
+            self.del_cell_info(del_label = label, frame = frame)
+
+        self.tracked[frame,:,:,0] = img_ann
+
+        self.update_image = True
+
+    def action_dilate_label(self):
+        '''
+        Use morphological dilation to incrementally increase the selected label.
+        Does not overwrite bordering labels.
+        '''
+
+        frame = self.mode.frame
+        label = self.mode.label
+        img_ann = self.tracked[frame,:,:,0]
+
+        img_dilate = np.where(img_ann==label, label, 0)
+        img_dilate = dilation(img_dilate, square(3))
+
+        img_ann = np.where(np.logical_and(img_dilate==label, img_ann==0), img_dilate, img_ann)
+
+        self.tracked[frame,:,:,0] = img_ann
+
+        self.update_image = True
+
     def add_cell_info(self, add_label, frame):
         '''
         helper function for actions that add a cell to the trk
@@ -3153,16 +3266,8 @@ class ZStackReview(CalibanWindow):
         self.highlighted_cell_one = -1
         self.highlighted_cell_two = -1
 
-        # options for displaying raw image with different cmaps
-        # cubehelix varies smoothly in lightness and hue, gist_yarg and gist_gray are grayscale
-        # and inverted grayscale, magma and nipy_spectral are alternatives to cubehelix, and prism
-        # has effect of showing contours in brightness of image
-        self.cmap_options = ['cubehelix', 'gist_yarg', 'gist_gray', 'magma', 'nipy_spectral', 'prism']
-        # start on cubehelix cmap
-        self.current_cmap_idx = 0
-        self.current_cmap = self.cmap_options[self.current_cmap_idx]
-
         self.brush = CalibanBrush(self.height, self.width)
+        self.threshold_flag = ''
 
         # stores y, x location of mouse click for actions that use skimage flooding
         # self.hole_fill_seed = None
@@ -3572,6 +3677,10 @@ class ZStackReview(CalibanWindow):
             self.brush.disable_drawing()
             self.brush.clear_view()
             self.update_image = True
+            if (modifiers & key.MOD_CTRL):
+                self.threshold_flag = 'adjust'
+            else:
+                self.threshold_flag = ''
 
     def edit_mode_misc_keypress_helper(self, symbol, modifiers):
         '''
@@ -3661,6 +3770,7 @@ class ZStackReview(CalibanWindow):
             # INVERT RAW IMAGE LIGHT/DARK
             if symbol == key.I:
                 self.invert = not self.invert
+                self.channel_adjustments[self.channel]['invert'] = self.invert
                 # if you invert the image while you're viewing composite, update composite
                 if not self.hide_annotations:
                     self.helper_update_composite()
@@ -3669,6 +3779,7 @@ class ZStackReview(CalibanWindow):
             # TOGGLE SOBEL FILTER
             if symbol == key.K:
                 self.sobel_on = not self.sobel_on
+                self.channel_adjustments[self.channel]['sobel_on'] = self.sobel_on
                 if not self.hide_annotations:
                     self.helper_update_composite()
                 self.update_image = True
@@ -3676,26 +3787,37 @@ class ZStackReview(CalibanWindow):
             # TOGGLE ADAPTIVE HISTOGRAM EQUALIZATION
             if symbol == key.J:
                 self.adapthist_on = not self.adapthist_on
+                self.channel_adjustments[self.channel]['adapthist_on'] = self.adapthist_on
                 if not self.hide_annotations:
                     self.helper_update_composite()
                 self.update_image = True
 
-            if modifiers & key.MOD_SHIFT:
-                if symbol == key.UP:
+        if modifiers & key.MOD_SHIFT:
+            if symbol == key.UP:
+                if self.draw_raw:
                     if self.current_cmap_idx == len(self.cmap_options) - 1:
                         self.current_cmap_idx = 0
                     elif self.current_cmap_idx < len(self.cmap_options) - 1:
                         self.current_cmap_idx += 1
+                    self.channel_adjustments[self.channel]['cmap'] = self.current_cmap_idx
                     self.current_cmap = self.cmap_options[self.current_cmap_idx]
-                    self.update_image = True
+                else:
+                    self.current_label_cmap_idx = (self.current_label_cmap_idx + 1) % 2
+                    self.labels_cmap = self.labels_cmap_options[self.current_label_cmap_idx]
+            self.update_image = True
 
-                if symbol == key.DOWN:
+            if symbol == key.DOWN:
+                if self.draw_raw:
                     if self.current_cmap_idx == 0:
                         self.current_cmap_idx = len(self.cmap_options) - 1
                     elif self.current_cmap_idx > 0:
                         self.current_cmap_idx -= 1
+                    self.channel_adjustments[self.channel]['cmap'] = self.current_cmap_idx
                     self.current_cmap = self.cmap_options[self.current_cmap_idx]
-                    self.update_image = True
+                else:
+                    self.current_label_cmap_idx = (self.current_label_cmap_idx + 1) % 2
+                    self.labels_cmap = self.labels_cmap_options[self.current_label_cmap_idx]
+            self.update_image = True
 
     def label_mode_none_keypress_helper(self, symbol, modifiers):
         '''
@@ -3832,6 +3954,10 @@ class ZStackReview(CalibanWindow):
         if symbol == key.X:
             self.mode.update("QUESTION", action="DELETE", **self.mode.info)
 
+        # CHANGE SIZE INCREMENTALLY
+        if symbol == key.Y:
+            self.mode.update("QUESTION", action="EROSION DILATION", **self.mode.info)
+
     def label_mode_multiple_keypress_helper(self, symbol, modifiers):
         '''
         Helper function for keypress handling. The keybinds that are
@@ -3957,6 +4083,15 @@ class ZStackReview(CalibanWindow):
                 self.action_flood_contiguous()
                 self.mode.clear()
 
+        # RESPOND TO MORPHOLOGICAL EROSION OR DILATION QUESTION
+        elif self.mode.action == "EROSION DILATION":
+            if symbol == key.Y:
+                self.action_dilate_label()
+                self.mode.clear()
+            elif symbol == key.T:
+                self.action_erode_label()
+                self.mode.clear()
+
     def get_raw_current_frame(self):
         return self.raw[self.current_frame,:,:,self.channel]
 
@@ -4020,6 +4155,12 @@ class ZStackReview(CalibanWindow):
         # in this case we only need to update self.max_intensity
         self.max_intensity = self.max_intensity_dict[self.channel]
         self.vmin = self.min_intensity_dict[self.channel]
+        self.invert = self.channel_adjustments[self.channel]['invert']
+        self.sobel_on = self.channel_adjustments[self.channel]['sobel_on']
+        self.adapthist_on = self.channel_adjustments[self.channel]['adapthist_on']
+        self.current_cmap_idx = self.channel_adjustments[self.channel]['cmap']
+        self.current_cmap = self.cmap_options[self.current_cmap_idx]
+
         if self.draw_raw:
             self.update_image = True
 
@@ -4331,8 +4472,12 @@ class ZStackReview(CalibanWindow):
             self.add_cell_info to update cell_info if a label is added
         '''
 
-        # pull out the selection portion of the raw frame
-        predict_area = self.raw[self.current_frame, y1:y2, x1:x2, self.channel]
+        if self.threshold_flag == 'adjust':
+            current_raw = self.raw[self.current_frame, :, :, self.channel]
+            predict_area = self.apply_raw_image_adjustments(current_raw, rgb=False)[y1:y2, x1:x2]
+        else:
+            # pull out the selection portion of the raw frame
+            predict_area = self.raw[self.current_frame, y1:y2, x1:x2, self.channel]
 
         # triangle threshold picked after trying a few on one dataset
         # may not be the best threshold approach for other datasets!
@@ -4349,6 +4494,8 @@ class ZStackReview(CalibanWindow):
         # apply new_label to areas of threshold that are True (foreground),
         # 0 for False (background)
         ann_threshold = np.where(hyst, new_label, 0)
+        # smooths out "feathered" edges
+        ann_threshold = closing(ann_threshold, disk(3))
 
         #put prediction in without overwriting
         predict_area = self.annotated[self.current_frame, y1:y2, x1:x2, self.feature]
@@ -4497,6 +4644,50 @@ class ZStackReview(CalibanWindow):
 
         # reset hole fill seed
         self.hole_fill_seed = None
+        self.update_image = True
+
+    def action_erode_label(self):
+        '''
+        Use morphological erosion to incrementally shrink the selected label.
+        '''
+
+        frame = self.mode.frame
+        label = self.mode.label
+        img_ann = self.annotated[frame,:,:,self.feature]
+
+        # if label is adjacent to another label, don't let that interfere
+        img_erode = np.where(img_ann==label, label, 0)
+        # erode the label
+        img_erode = erosion(img_erode, square(3))
+
+        # put the label back in
+        img_ann = np.where(img_ann==label, img_erode, img_ann)
+
+        in_modified = np.any(np.isin(img_ann, label))
+        if not in_modified:
+            self.del_cell_info(feature = self.feature, del_label = label, frame = frame)
+
+        self.annotated[frame,:,:,self.feature] = img_ann
+
+        self.update_image = True
+
+    def action_dilate_label(self):
+        '''
+        Use morphological dilation to incrementally increase the selected label.
+        Does not overwrite bordering labels.
+        '''
+
+        frame = self.mode.frame
+        label = self.mode.label
+        img_ann = self.annotated[frame,:,:,self.feature]
+
+        img_dilate = np.where(img_ann==label, label, 0)
+        img_dilate = dilation(img_dilate, square(3))
+
+        img_ann = np.where(np.logical_and(img_dilate==label, img_ann==0), img_dilate, img_ann)
+
+        self.annotated[frame,:,:,self.feature] = img_ann
+
         self.update_image = True
 
     def action_predict_single(self):
