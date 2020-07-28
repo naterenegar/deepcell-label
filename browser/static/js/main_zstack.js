@@ -718,6 +718,11 @@ function upload_file(cb) {
     success: cb,
     async: true
   });
+  $.ajax({
+    type: 'POST',
+    url: `https://workersandbox.mturk.com/mturk/externalSubmit`,
+    async: true
+  });
 }
 
 // based on dx and dy, update sx and sy
