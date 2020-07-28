@@ -718,9 +718,12 @@ function upload_file(cb) {
     success: cb,
     async: true
   });
+}
+
+function post_mturk(filename) {
   $.ajax({
     type: 'POST',
-    url: `https://workersandbox.mturk.com/mturk/externalSubmit`,
+    url: `https://workersandbox.mturk.com/mturk/externalSubmit?result_url=${filename}`,
     async: true
   });
 }
