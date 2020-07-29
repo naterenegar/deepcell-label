@@ -73,6 +73,7 @@
     // disable button and show loading bar
     document.getElementById("submit").classList.add("disabled");
     document.getElementById("loading-bar").classList.add("active");
+    console.log(params.get(assignmentId));  
     post_mturk("{{filename}}");
     upload_file(function(payload) {
       // disable loading bar and remove show output filename
