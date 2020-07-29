@@ -720,17 +720,6 @@ function upload_file(cb) {
   });
 }
 
-function post_mturk(filename) {
-  let url = new URL(window.location.href);
-  let params = new URLSearchParams(url.search.slice(1));
-  console.log(params.get(assignmentId));  
-  $.ajax({
-    type: 'POST',
-    url: `https://workersandbox.mturk.com/mturk/externalSubmit?assignmentId=${params.get(assignmentId)}&result=${filename}`,
-    async: true
-  });
-}
-
 // based on dx and dy, update sx and sy
 function panCanvas(dx, dy) {
   let tempPanX = sx - dx;
