@@ -19,9 +19,8 @@
 
         <div class="col s6">
           <form name="mturk_form" method="post" id="mturk_form" action="https://workersandbox.mturk.com/mturk/externalSubmit">
-            <input type="hidden" value='' name="assignmentId" id={self.props.userData.assignmentId}>
-            <input type="hidden" value='' name="result" id={{filename}}>
-            <button type="submit" id="submit" class="btn waves-effect waves-light blue" onClick="upload()">
+            <input type="hidden" value={{filename}} name="result" id="result">
+            <button id="submit" class="btn waves-effect waves-light blue" onClick="upload()">
               Submit<i class="material-icons right">send</i>
             </button>
           </form>
@@ -77,10 +76,19 @@
     // disable button and show loading bar
     document.getElementById("submit").classList.add("disabled");
     document.getElementById("loading-bar").classList.add("active");
-    $('#mturk_form').submit();
+    // get assignmentId from url
     let url = new URL(window.location.href);
     let params = new URLSearchParams(url.search.slice(1));
-    console.log(params.get("assignmentId"));  
+    let assignmentId = params.get("assignmentId");
+    console.log(assignmentId);
+    // add assignmentId to form to POST to externalSubmit
+    $("<input type='hidden'>")
+     .attr("value", assignmentId)
+     .attr("id", "assignmentId")
+     .attr("name", "assignmentId")
+     .appendTo("#mturk_form");
+    // POST to externalSubmit
+    $('#mturk_form').submit();
     upload_file(function(payload) {
       // disable loading bar and remove show output filename
       document.getElementById("loading-bar").classList.remove("active");
