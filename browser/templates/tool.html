@@ -18,9 +18,13 @@
       <div class="row">
 
         <div class="col s6">
-          <button id="submit" class="btn waves-effect waves-light blue" onClick="upload()">
-            Submit<i class="material-icons right">send</i>
-          </button>
+          <form name="mturk_form" method="post" id="mturk_form" action="https://workersandbox.mturk.com/mturk/externalSubmit">
+            <input type="hidden" value='' name="assignmentId" id={self.props.userData.assignmentId}>
+            <input type="hidden" value='' name="result" id={{filename}}>
+            <button type="submit" id="submit" class="btn waves-effect waves-light blue" onClick="upload()">
+              Submit<i class="material-icons right">send</i>
+            </button>
+          </form>
         </div>
 
         <div class="col s6">
@@ -73,6 +77,7 @@
     // disable button and show loading bar
     document.getElementById("submit").classList.add("disabled");
     document.getElementById("loading-bar").classList.add("active");
+    $('#mturk_form').submit();
     let url = new URL(window.location.href);
     let params = new URLSearchParams(url.search.slice(1));
     console.log(params.get("assignmentId"));  
