@@ -723,6 +723,7 @@ function upload_file(cb) {
 function post_mturk(filename) {
   let url = new URL(window.location.href);
   let params = new URLSearchParams(url.search.slice(1));
+  console.log(params.get(assignmentId));  
   $.ajax({
     type: 'POST',
     url: `https://workersandbox.mturk.com/mturk/externalSubmit?assignmentId=${params.get(assignmentId)}&result=${filename}`,
