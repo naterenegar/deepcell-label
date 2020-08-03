@@ -24,7 +24,7 @@
 # limitations under the License.
 # ==============================================================================
 """Displaying and Curating annotations tracked over time in multiple frames."""
-from mode import Mode
+from mode import Mode, Mode2D, Mode3D, ModeTrack
 
 import cv2
 import json
@@ -2002,10 +2002,6 @@ class TrackReview(CalibanWindow):
     possible_keys = {"label", "daughters", "frames", "parent", "frame_div",
                      "capped"}
 
-    replace_prompt = ("\nReplace {} with {}?"
-                     "\nSPACE = REPLACE IN ALL FRAMES"
-                     "\nESC = CANCEL")
-
     def __init__(self, filename, lineage, raw, tracked):
         self.filename = filename
         self.tracks = lineage
@@ -2033,8 +2029,7 @@ class TrackReview(CalibanWindow):
         self.max_intensity = None
         self.x = 0
         self.y = 0
-        self.mode = Mode.none()
-        self.mode.update_prompt_additions = self.custom_prompt
+        self.mode = ModeTrack.none()
         self.adjustment = 0
         self.highlight = False
         self.highlighted_cell_one = -1
@@ -2700,12 +2695,6 @@ class TrackReview(CalibanWindow):
                 self.action_erode_label()
                 self.mode.clear()
 
-    def custom_prompt(self):
-        if self.mode.kind == "QUESTION":
-            if self.mode.action == "REPLACE":
-                self.mode.text = TrackReview.replace_prompt.format(self.mode.label_2,
-                    self.mode.label_1)
-
     def get_raw_current_frame(self):
         return self.raw[self.current_frame,:,:,0]
 
@@ -3152,28 +3141,34 @@ class TrackReview(CalibanWindow):
         for track in empty_tracks:
         	del self.tracks[track]
 
-        with tarfile.open(self.filename + ".trk", "w") as trks:
-            with tempfile.NamedTemporaryFile("w") as lineage_file:
-                json.dump(self.tracks, lineage_file, indent=1)
-                lineage_file.flush()
-                trks.add(lineage_file.name, "lineage.json")
+        try:
+            with tarfile.open(self.filename + ".trk", "w") as trks:
+                with tempfile.NamedTemporaryFile("w") as lineage_file:
+                    json.dump(self.tracks, lineage_file, indent=1)
+                    lineage_file.flush()
+                    trks.add(lineage_file.name, "lineage.json")
 
-            with tempfile.NamedTemporaryFile() as raw_file:
-                np.save(raw_file, self.raw)
-                raw_file.flush()
-                trks.add(raw_file.name, "raw.npy")
+                with tempfile.NamedTemporaryFile() as raw_file:
+                    np.save(raw_file, self.raw)
+                    raw_file.flush()
+                    trks.add(raw_file.name, "raw.npy")
 
-            with tempfile.NamedTemporaryFile() as tracked_file:
-                np.save(tracked_file, self.tracked)
-                tracked_file.flush()
-                trks.add(tracked_file.name, "tracked.npy")
+                with tempfile.NamedTemporaryFile() as tracked_file:
+                    np.save(tracked_file, self.tracked)
+                    tracked_file.flush()
+                    trks.add(tracked_file.name, "tracked.npy")
+
+        except FileNotFoundError:
+            print('Encountered FileNotFoundError when trying to save.\n'
+                  'Make sure you are still connected to the directory you loaded this file from.')
+
+        # don't want a case where we raise an exception,
+        # that would defeat the purpose of trying to save the file
+        except Exception as e:
+            print('Unexpected error saving file.')
+            print(e.message)
 
 class ZStackReview(CalibanWindow):
-
-    save_prompt_text = ("\nSave current file?"
-                        "\nSPACE = SAVE"
-                        "\nT = SAVE AS .TRK FILE"
-                        "\nESC = CANCEL")
 
     def __init__(self, filename, raw, annotated, save_vars_mode):
         '''
@@ -3205,8 +3200,23 @@ class ZStackReview(CalibanWindow):
         # file opens to the first channel
         self.channel = 0
 
+        # should be robust to 3D, 4D, and some cases of 5D array sizes
+        self.dims = raw.ndim
+        if self.dims == 3:
+            print('Warning: Caliban is intended to open 4D arrays.'
+                  ' Did you mean to open a 3D file?')
+            self.raw = np.expand_dims(self.raw, axis=0)
+            self.annotated = np.expand_dims(self.annotated, axis=0)
+
+        elif self.dims == 5:
+            print('Warning: Caliban is intended to open 4D arrays.'
+                  ' Did you mean to open a 5D file?')
+            self.raw = np.squeeze(self.raw, axis=0)
+            self.annotated = np.squeeze(self.annotated, axis=0)
+
         # unpack the shape of the raw array
-        self.num_frames, self.height, self.width, self.channel_max = raw.shape
+        self.num_frames, self.height, self.width, self.channel_max = self.raw.shape
+        self.single_frame = self.num_frames == 1
 
         # info dictionaries that will be populated with info about labels for
         # each feature of annotation array
@@ -3222,10 +3232,17 @@ class ZStackReview(CalibanWindow):
         try:
             first_key = list(self.cell_info[0])[0]
             display_info_types = self.cell_info[0][first_key]
-            self.display_info = [*sorted(set(display_info_types) - {'frames'})]
+            if self.single_frame:
+                self.display_info = list(sorted(set(display_info_types) - {'frames', 'slices'}))
+            else:
+                self.display_info = list(sorted(set(display_info_types) - {'frames'}))
+
         # if there are no labels in the feature, hardcode the display info
         except:
-            self.display_info = ['label', 'slices']
+            if self.single_frame:
+                self.display_info = ['label']
+            else:
+                self.display_info = ['label', 'slices']
 
         # open file to first frame of annotation stack
         self.current_frame = 0
@@ -3257,8 +3274,10 @@ class ZStackReview(CalibanWindow):
         # self.mode keeps track of selected labels, pending actions, displaying
         # prompts and confirmation dialogue, using Mode class; start with Mode.none()
         # (nothing selected, no actions pending)
-        self.mode = Mode.none()
-        self.mode.update_prompt_additions = self.custom_prompt
+        if self.single_frame:
+            self.mode = Mode2D.none()
+        else:
+            self.mode = Mode3D.none()
 
         # start with highlighting option turned off and no labels highlighted
         self.highlight = False
@@ -3278,11 +3297,6 @@ class ZStackReview(CalibanWindow):
 
         # start pyglet event loop
         pyglet.app.run()
-
-    def custom_prompt(self):
-        if self.mode.kind == "QUESTION":
-            if self.mode.action == "SAVE":
-                self.mode.text = ZStackReview.save_prompt_text
 
     def handle_threshold(self):
         '''
@@ -3735,7 +3749,7 @@ class ZStackReview(CalibanWindow):
             if symbol == key.SPACE:
                 self.save()
                 self.mode.clear()
-            if symbol == key.T:
+            if symbol == key.T and self.num_frames > 1:
                 self.save_as_trk()
                 self.mode.clear()
 
@@ -3903,7 +3917,7 @@ class ZStackReview(CalibanWindow):
             self.mode.update("QUESTION", action="SAVE")
 
         # PREDICT
-        if symbol == key.P:
+        if symbol == key.P and not self.single_frame:
             self.mode.update("QUESTION", action="PREDICT", **self.mode.info)
 
         # RELABEL
@@ -4004,7 +4018,7 @@ class ZStackReview(CalibanWindow):
         '''
         # RESPOND TO SAVE QUESTION
         if self.mode.action == "SAVE":
-            if symbol == key.T:
+            if symbol == key.T and not self.single_frame:
                 self.save_as_trk()
                 self.mode.clear()
             if symbol == key.SPACE:
@@ -4013,18 +4027,19 @@ class ZStackReview(CalibanWindow):
 
         # RESPOND TO RELABEL QUESTION
         elif self.mode.action == "RELABEL":
-            if symbol == key.U:
-                self.action_relabel_unique()
-                self.mode.clear()
-            if symbol == key.P:
-                self.action_relabel_preserve()
-                self.mode.clear()
-            if symbol == key.S:
-                self.action_relabel_frame()
-                self.mode.clear()
             if symbol == key.SPACE:
                 self.action_relabel_all_frames()
                 self.mode.clear()
+            if not self.single_frame:
+                if symbol == key.U:
+                    self.action_relabel_unique()
+                    self.mode.clear()
+                if symbol == key.P:
+                    self.action_relabel_preserve()
+                    self.mode.clear()
+                if symbol == key.S:
+                    self.action_relabel_frame()
+                    self.mode.clear()
 
         # RESPOND TO PREDICT QUESTION
         elif self.mode.action == "PREDICT":
@@ -4037,7 +4052,7 @@ class ZStackReview(CalibanWindow):
 
         # RESPOND TO CREATE QUESTION
         elif self.mode.action == "CREATE NEW":
-            if symbol == key.S:
+            if symbol == key.S and not self.single_frame:
                 self.action_new_single_cell()
                 self.mode.clear()
             if symbol == key.SPACE:
@@ -4046,7 +4061,7 @@ class ZStackReview(CalibanWindow):
 
         # RESPOND TO REPLACE QUESTION
         elif self.mode.action == "REPLACE":
-            if symbol == key.S:
+            if symbol == key.S and not self.single_frame:
                 self.action_replace_single()
                 self.mode.clear()
             if symbol == key.SPACE:
@@ -4055,7 +4070,7 @@ class ZStackReview(CalibanWindow):
 
         # RESPOND TO SWAP QUESTION
         elif self.mode.action == "SWAP":
-            if symbol == key.S:
+            if symbol == key.S and not self.single_frame:
                 self.action_swap_single_frame()
                 self.mode.clear()
             if symbol == key.SPACE:
@@ -4875,16 +4890,39 @@ class ZStackReview(CalibanWindow):
             self.raw and self.annotated are arrays to save in npz (self.raw should always
                 remain unmodified, but self.annotated may be modified)
         '''
+        # make sure has same dims as original
+        if self.dims == 3:
+            raw = np.squeeze(self.raw, axis=0)
+            ann = np.squeeze(self.annotated, axis=0)
+        elif self.dims == 4:
+            raw = self.raw
+            ann = self.annotated
+        elif self.dims == 5:
+            raw = np.expand_dims(self.raw, axis=0)
+            ann = np.expand_dims(self.annotated, axis=0)
+
         # create filename to save as
         save_file = self.filename + "_save_version_{}.npz".format(self.save_version)
-        # if file was opened with variable names raw and annotated, save them that way
-        if self.save_vars_mode == 0:
-            np.savez(save_file, raw = self.raw, annotated = self.annotated)
-        # otherwise, save as X and y
-        else:
-            np.savez(save_file, X = self.raw, y = self.annotated)
-        # keep track of which version of the file this is
-        self.save_version += 1
+
+        try:
+            # if file was opened with variable names raw and annotated, save them that way
+            if self.save_vars_mode == 0:
+                np.savez(save_file, raw=raw, annotated=ann)
+            # otherwise, save as X and y
+            else:
+                np.savez(save_file, X=raw, y=ann)
+            # keep track of which version of the file this is
+            self.save_version += 1
+
+        except FileNotFoundError:
+            print('Encountered FileNotFoundError when trying to save.\n'
+                  'Make sure you are still connected to the directory you loaded this file from.')
+
+        # don't want a case where we raise an exception,
+        # that would defeat the purpose of trying to save the file
+        except Exception as e:
+            print('Unexpected error saving file.')
+            print(e.message)
 
     def add_cell_info(self, feature, add_label, frame):
         '''
@@ -5100,21 +5138,32 @@ class ZStackReview(CalibanWindow):
         trk_ann = np.zeros((self.num_frames, self.height, self.width,1), dtype = self.annotated.dtype)
         trk_ann[:,:,:,0] = self.annotated[:,:,:,self.feature]
 
-        with tarfile.open(filename + ".trk", "w") as trks:
-            with tempfile.NamedTemporaryFile("w") as lineage_file:
-                json.dump(self.lineage, lineage_file, indent=1)
-                lineage_file.flush()
-                trks.add(lineage_file.name, "lineage.json")
+        try:
+            with tarfile.open(filename + ".trk", "w") as trks:
+                with tempfile.NamedTemporaryFile("w") as lineage_file:
+                    json.dump(self.lineage, lineage_file, indent=1)
+                    lineage_file.flush()
+                    trks.add(lineage_file.name, "lineage.json")
 
-            with tempfile.NamedTemporaryFile() as raw_file:
-                np.save(raw_file, trk_raw)
-                raw_file.flush()
-                trks.add(raw_file.name, "raw.npy")
+                with tempfile.NamedTemporaryFile() as raw_file:
+                    np.save(raw_file, trk_raw)
+                    raw_file.flush()
+                    trks.add(raw_file.name, "raw.npy")
 
-            with tempfile.NamedTemporaryFile() as tracked_file:
-                np.save(tracked_file, trk_ann)
-                tracked_file.flush()
-                trks.add(tracked_file.name, "tracked.npy")
+                with tempfile.NamedTemporaryFile() as tracked_file:
+                    np.save(tracked_file, trk_ann)
+                    tracked_file.flush()
+                    trks.add(tracked_file.name, "tracked.npy")
+
+        except FileNotFoundError:
+            print('Encountered FileNotFoundError when trying to save.\n'
+                  'Make sure you are still connected to the directory you loaded this file from.')
+
+        # don't want a case where we raise an exception,
+        # that would defeat the purpose of trying to save the file
+        except Exception as e:
+            print('Unexpected error saving file.')
+            print(e.message)
 
 def on_or_off(toggle):
     if toggle:
@@ -5357,4 +5406,3 @@ def review(filename):
 
 if __name__ == "__main__":
     review(sys.argv[1])
-
