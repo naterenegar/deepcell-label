@@ -48,20 +48,16 @@
 
     </div>
 
-    <div id="canvas-col" class="col s6 offset-s1">
-      <!-- Canvas used to display image and capture user input -->
-      <canvas id="canvas" class="z-depth-2"></canvas>
-      <!-- Second canvas used for acutal image processing, hidden -->
-      <canvas id="hidden_seg_canvas" class="hide"></canvas>
-    </div>
+    <div id="canvas-col" class="col s6 offset-s1"></div>
 
   </div>
 </main>
 {%- endblock -%}
 
 {%- block extraJs -%}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/konva/7.0.5/konva.min.js" integrity="sha512-M1bxIW2Kl+fQWEbWA59q+0qJ8yjyn0kmQeLEVmHzoC8OnJsr8zkrnNScsVRpbBDzq19LP/pwEsB+/sVW9+w+Zg==" crossorigin="anonymous"></script>
 {%- if filetype == "zstack" -%}
-  <script type="text/javascript" src="{{ url_for('static', filename='js/main_zstack.js') }}"></script>
+  <script type="text/javascript" src="{{ url_for('static', filename='js/core.js') }}"></script>
 {%- elif filetype == "track" -%}
   <script type="text/javascript" src="{{ url_for('static', filename='js/main_track.js') }}"></script>
 {%- endif -%}
@@ -79,7 +75,7 @@
       document.getElementById("output").classList.remove("hide");
     });
   }
-  start_caliban("{{filename}}");
+  startCaliban("{{filename}}", settings);
 </script>
 <!-- END CALIBAN FUNCTION CALL -->
 {%- endblock -%}
