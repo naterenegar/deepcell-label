@@ -137,7 +137,7 @@ class Caliban {
       x: this.stage.width() / 2,
       y: this.stage.height() / 2,
       radius: 3,
-      fill: 'red',
+      fill: 'white',
       visible: false,
       opacity: 0.4,
       listening: false,
@@ -435,7 +435,7 @@ class Caliban {
     const visibility = this._editMode ? 'visible' : 'hidden';
 
     if (this._editMode) {
-      document.getElementById('edit_brush').innerHTML = this.brush.size;
+      document.getElementById('edit_brush').innerHTML = this.brushShape.radius();
 
       const editLabel = this.brush.value > 0 ? this.brush.value : '-';
       document.getElementById('edit_label').innerHTML = editLabel;
