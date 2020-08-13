@@ -508,6 +508,9 @@ class Caliban {
     const oldScale = this.stage.scaleX();
     const pointer = this.stage.getPointerPosition();
 
+    const oldHeight = this.stage.height();
+    const oldWidth = this.stage.width();
+
     const newScale = zoomDelta > 0 ? oldScale * scaleBy : oldScale / scaleBy;
 
     // update mouse position if mouse is on the canvas
@@ -519,8 +522,8 @@ class Caliban {
         });
       }
       this.stage.scale({ x: newScale, y: newScale });
-      // this.stage.height(oldHeight);
-      // this.stage.width(oldWidth);
+      this.stage.height(oldHeight);
+      this.stage.width(oldWidth);
       this.stage.batchDraw();
     }
   }
