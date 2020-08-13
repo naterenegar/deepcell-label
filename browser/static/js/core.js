@@ -36,23 +36,43 @@ class Caliban {
     this._editMode = pixelOnly && !labelOnly;
     this._currentHighlight = this._rgb;
     this._displayLabels = !this._rgb;
-    this._inverted = true;
     this._renderingRaw = false;
 
+    // currently viewing state
     this._channel = 0;
     this._feature = 0;
     this._frame = 0;
+
     this._minScale = 1; // update this when resizing canvas.
 
     // drawing with Konva: https://konvajs.org/docs/sandbox/Free_Drawing.html
-    this._isPaint = false;
     this.brush = new Brush(null, this._rawHeight, this._rawWidth, padding);
 
+    // brightness and contrast adjustment
+    this._minContrast = -100;
+    this._maxContrast = 100;
+
+    this._minBrightness = -1;
+    this._maxBrightness = 0.7;
+
+    // image adjustments are stored per channel for better viewing
+    this.contrastMap = new Map();
+    this.brightnessMap = new Map();
+    this.invertMap = new Map();
+
+    this.maxLabelsMap = new Map();
+
+    this.brightness = 0;
+    this.contrast = 0;
+    this.inverted = true;
+
+    // Konva stage, layers, and shapes.
     this.stage = new Konva.Stage({
       container: 'canvas-col',
       width: this._rawWidth,
       height: this._rawHeight
     });
+    this.stage.container().style.cursor = 'crosshair';
 
     this.stage.on('wheel', (event) => {
       // don't scroll the page
@@ -71,26 +91,6 @@ class Caliban {
 
     // this.stage.getContainer().style.backgroundColor = 'black';
     this.fitStageIntoParentContainer();
-
-    // brightness and contrast adjustment
-    this._minContrast = -100;
-    this._maxContrast = 100;
-
-    this._minBrightness = -1;
-    this._maxBrightness = 0.7;
-
-    // image adjustments are stored per channel for better viewing
-    this.contrastMap = new Map();
-    this.brightnessMap = new Map();
-    this.invertMap = new Map();
-
-    for (let i = 0; i < this._maxChannels; i++) {
-      this.brightnessMap.set(i, 0);
-      this.contrastMap.set(i, 0);
-      this.invertMap.set(i, true);
-    }
-
-    this.maxLabelsMap = new Map();
 
     this.layer = new Konva.Layer();
     this.stage.add(this.layer);
@@ -171,7 +171,7 @@ class Caliban {
 
     if (grayscale) {
       filters.push(Konva.Filters.Grayscale);
-      if (this._inverted) {
+      if (this.inverted) {
         filters.push(Konva.Filters.Invert);
       }
     }
@@ -269,13 +269,6 @@ class Caliban {
     filters.push(compositeFilter);
 
     this.segImage.filters(filters);
-  }
-
-  renderPostAnnotationImage() {
-    // create composite images
-    this._prepareGrayscaleRawImage();
-    this._preparePostCompositeImage();
-    this.layer.batchDraw();
   }
 
   _preparePostCompositeImageRGB() {
