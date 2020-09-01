@@ -404,10 +404,10 @@ def load_feedback(filename):
         rgb = request.args.get('rgb', default='false', type=str)
         rgb = bool(distutils.util.strtobool(rgb))
         # Initate ZStackReview object and entry in database
-        input_file = BaseFile(filename, input_bucket, full_path)
-        output_file = BaseFile(filename, output_bucket, full_path)
-        zstack_feedback = ZStackFeedback(input_file, output_file)
-        project = Project.create_project(filename, zstack_feedback, subfolders)
+        input_file = BaseFile(filename, input_bucket, full_path, 'raw', 'annotated')
+        output_file = BaseFile(filename, output_bucket, full_path, 'raw', 'annotated')
+        feedback = Feedback(input_file, output_file)
+        project = Project.create_project(filename, feedback, subfolders)
         current_app.logger.debug('Loaded npz feedback file "%s" in %s s.',
                                  filename, timeit.default_timer() - start)
         # Send attributes to .js file
