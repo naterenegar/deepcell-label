@@ -25,6 +25,7 @@ from helpers import is_trk_file, is_npz_file
 from files import CalibanFile
 from models import Project
 from caliban import TrackEdit, ZStackEdit
+from feedback import Feedback
 
 
 bp = Blueprint('caliban', __name__)  # pylint: disable=C0103
@@ -402,8 +403,8 @@ def load_feedback(filename):
         rgb = request.args.get('rgb', default='false', type=str)
         rgb = bool(distutils.util.strtobool(rgb))
         # Initate ZStackReview object and entry in database
-        input_file = BaseFile(filename, input_bucket, full_path, 'raw', 'annotated')
-        output_file = BaseFile(filename, output_bucket, full_path, 'raw', 'annotated')
+        input_file = CalibanFile(filename, input_bucket, full_path)
+        output_file = CalibanFile(filename, output_bucket, full_path)
         feedback = Feedback(input_file, output_file)
         project = Project.create_project(filename, feedback, subfolders)
         current_app.logger.debug('Loaded npz feedback file "%s" in %s s.',

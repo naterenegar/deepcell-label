@@ -6,11 +6,11 @@ from __future__ import print_function
 import numpy as np
 from matplotlib import pyplot as plt
 
-from views import BaseView
+from caliban import View
 from imgutils import pngify
 
 
-class Feedback(BaseView):
+class Feedback(View):
     """Class to view feedback from quality control on zstack images."""
 
     # TODO: @tddough98 replace input_file/output_file with worker_file/qc_file
