@@ -13,32 +13,47 @@ from imgutils import pngify
 class Feedback(View):
     """Class to view feedback from quality control on zstack images."""
 
-    # TODO: @tddough98 replace input_file/output_file with worker_file/qc_file
-    def __init__(self, input_file, output_file):
+    # TODO: @tddough98 replace input_img/output_img with worker_img/qc_img
+    def __init__(self, input_img, output_img):
 
-        self.input_file = input_file
-        self.output_file = output_file
+        self.input_img = input_img
+        self.output_img = output_img
+        self.view_input = True
 
-        super(Feedback, self).__init__(input_file)
+        super(Feedback, self).__init__(input_img)
 
         self.diff_cmap = plt.get_cmap('Dark2')
 
-    def get_labels(self, frame, file_):
-        """Get the labels for the given frame and file."""
-        # why does this function only return one label at a time? how are the labels combined?
-        self.current_frame = frame
-        labels = file_.annotated[frame, ..., self.feature]
-        labels = np.ma.masked_equal(labels, 0)
-        return pngify(imgarr=labels,
-                      vmin=0,
-                      vmax=self.get_max_label(),
-                      cmap=self.color_map)
+    def change_view(self, source):
+        self._y_changed = True
+        self.view_input = source == 'input'
+        if source == 'input':
+            self.img = self.input_img
+        else:
+            self.img = self.output_img
+
+
+    def get_max_label(self):
+        input_max = self.input_img.get_max_label(self.feature)
+        output_max = self.output_img.get_max_label(self.feature)
+        return max(input_max, output_max)
+
+    # def get_labels(self, frame):
+    #     """Get the labels for the given frame."""
+    #     # why does this function only return one label at a time? how are the labels combined?
+    #     self.current_frame = frame
+    #     labels = self.img.annotated[frame, ..., self.feature]
+    #     labels = np.ma.masked_equal(labels, 0)
+    #     return pngify(imgarr=labels,
+    #                   vmin=0,
+    #                   vmax=self.get_max_label(),
+    #                   cmap=self.color_map)
 
     def get_diff(self, frame):
         """Compute the difference in labels between the input and output for the current frame."""
         self.current_frame = frame
-        labels = self.input_file.annotated[frame, ..., self.feature]
-        labels_qc = self.output_file.annotated[frame, ..., self.feature]
+        labels = self.input_img.annotated[frame, ..., self.feature]
+        labels_qc = self.output_img.annotated[frame, ..., self.feature]
 
         # Create boolean arrays to show each type of change
         merged = merged_area(labels, labels_qc)
@@ -74,8 +89,8 @@ class Feedback(View):
         Returns a dictionary of statistics about changed labels.
         """
         # Get the input and output labelings
-        labels = self.input_file.annotated[frame, ..., self.feature]
-        labels_qc = self.output_file.annotated[frame, ..., self.feature]
+        labels = self.input_img.annotated[frame, ..., self.feature]
+        labels_qc = self.output_img.annotated[frame, ..., self.feature]
 
         # Create boolean arrays to show each type of change
         merged = merged_area(labels, labels_qc)

@@ -427,7 +427,7 @@ def load_feedback(filename):
 
 
 @bp.route('/feedback/<source>/<int:frame>/<int:project_id>')
-def get_diff_frame(source, frame, project_id):
+def get_feedback_frame(source, frame, project_id):
     ''' Serve modes of diff frames as pngs. Send pngs and color mappings of
         cells to .js file.
     '''
@@ -439,18 +439,12 @@ def get_diff_frame(source, frame, project_id):
         return jsonify({'error': 'project_id not found'}), 404
 
     state = load_project_state(project)
-
-    if source == 'input':
-        img = state.get_labels(frame, state.input_file)
-    elif source == 'output':
-        img = state.get_labels(frame, state.output_file)
-    elif source == 'diff':
+    state.change_view(source)
+    img = state.get_frame(frame, raw=False)
+    if source == 'diff':
         img = state.get_diff(frame)
-
     edit_arr = state.get_array(frame)
-
     encode = lambda x: base64.encodebytes(x.read()).decode()
-
     payload = {
         'segmented': f'data:image/png;base64,{encode(img)}',
         'seg_arr': edit_arr.tolist()
@@ -460,6 +454,8 @@ def get_diff_frame(source, frame, project_id):
                              source, frame, project_id, timeit.default_timer() - start)
 
     return jsonify(payload)
+
+    
 # Factory for Edit objects
 def get_edit(file_, output_bucket, rgb):
     if is_npz_file(file_.filename):
