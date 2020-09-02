@@ -16,20 +16,20 @@ from helpers import is_npz_file, is_trk_file
 from config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 
-class BaseFile(object):  # pylint: disable=useless-object-inheritance
+class CalibanFile(object):  # pylint: disable=useless-object-inheritance
     """Base class for the files viewed in Caliban."""
 
-    def __init__(self, filename, bucket, path, raw_key, annotated_key):
+    def __init__(self, filename, bucket, path, raw_key=None, annotated_key=None):
         self.filename = filename
         self.bucket = bucket
         self.path = path
 
-        self.raw_key = raw_key
-        self.annotated_key = annotated_key
+        self.raw_key = raw_key if raw_key is not None else 'raw'
+        self.annotated_key = annotated_key if annotated_key is not None else get_ann_key(filename)
 
         self.trial = self.load()
-        self.raw = self.trial[raw_key]
-        self.annotated = self.trial[annotated_key]
+        self.raw = self.trial[self.raw_key]
+        self.annotated = self.trial[self.annotated_key]
 
         self.channel_max = self.raw.shape[-1]
         self.feature_max = self.annotated.shape[-1]
@@ -37,6 +37,17 @@ class BaseFile(object):  # pylint: disable=useless-object-inheritance
         self.max_frames = self.raw.shape[0]
         self.height = self.raw.shape[1]
         self.width = self.raw.shape[2]
+
+        # possible differences between single channel and rgb displays
+        # moved from the rgb block in View Constructor
+        if self.raw.ndim == 3:
+            self.raw = np.expand_dims(self.raw, axis=0)
+            self.annotated = np.expand_dims(self.annotated, axis=0)
+
+            # reassigning height/width for new shape.
+            self.max_frames = self.raw.shape[0]
+            self.height = self.raw.shape[1]
+            self.width = self.raw.shape[2]
 
         # create a dictionary with frame information about each cell
         # analogous to .trk lineage but doesn't include cells relationships
@@ -83,13 +94,7 @@ class BaseFile(object):  # pylint: disable=useless-object-inheritance
 
     def load(self):
         """Load a file from the S3 input bucket"""
-        if is_npz_file(self.filename):
-            _load = load_npz
-        elif is_trk_file(self.filename):
-            _load = load_trks
-        else:
-            raise ValueError('Cannot load file: {}'.format(self.filename))
-
+        _load = get_load(self.filename)
         s3 = self._get_s3_client()
         response = s3.get_object(Bucket=self.bucket, Key=self.path)
         return _load(response['Body'].read())
@@ -118,6 +123,22 @@ class BaseFile(object):  # pylint: disable=useless-object-inheritance
 
 def consecutive(data, stepsize=1):
     return np.split(data, np.where(np.diff(data) != stepsize)[0] + 1)
+
+
+def get_ann_key(filename):
+    if is_trk_file(filename):
+        return 'tracked'
+    return 'annotated'  # 'annotated' is the default key
+
+
+def get_load(filename):
+    if is_npz_file(filename):
+        _load = load_npz
+    elif is_trk_file(filename):
+        _load = load_trks
+    else:
+        raise ValueError('Cannot load file: {}'.format(filename))
+    return _load
 
 
 def load_npz(filename):
