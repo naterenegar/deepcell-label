@@ -140,13 +140,7 @@ class View(object):  # pylint: disable=useless-object-inheritance
         Returns:
             int: highest label in the current feature
         """
-        # check this first, np.max of empty array will crash
-        if len(self.file.cell_ids[self.feature]) == 0:
-            max_label = 0
-        # if any labels exist in feature, find the max label
-        else:
-            max_label = int(np.max(self.file.cell_ids[self.feature]))
-        return max_label
+        return self.file_.get_max_label(self.feature)
 
     def reduce_to_RGB(self):
         """

@@ -120,6 +120,25 @@ class CalibanFile(object):  # pylint: disable=useless-object-inheritance
                     self.cell_info[feature][cell]['frames'].append(int(frame))
             self.cell_info[feature][cell]['slices'] = ''
 
+    def get_max_label(self, feature):
+        """
+        Get the highest label used in the given feature.
+        If feature is empty, returns 0 to prevent other functions from crashing.
+
+        Args:
+            feature (int): feature of interest
+
+        Returns:
+            int: highest label in feature
+        """
+        # check this first, np.max of empty array will crash
+        if len(self.cell_ids[feature]) == 0:
+            max_label = 0
+        # if any labels exist in feature, find the max label
+        else:
+            max_label = int(np.max(self.cell_ids[feature]))
+        return max_label
+
 
 def consecutive(data, stepsize=1):
     return np.split(data, np.where(np.diff(data) != stepsize)[0] + 1)
