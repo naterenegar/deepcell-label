@@ -32,22 +32,10 @@ class Feedback(View):
         else:
             self.img = self.output_img
 
-
     def get_max_label(self):
         input_max = self.input_img.get_max_label(self.feature)
         output_max = self.output_img.get_max_label(self.feature)
         return max(input_max, output_max)
-
-    # def get_labels(self, frame):
-    #     """Get the labels for the given frame."""
-    #     # why does this function only return one label at a time? how are the labels combined?
-    #     self.current_frame = frame
-    #     labels = self.img.annotated[frame, ..., self.feature]
-    #     labels = np.ma.masked_equal(labels, 0)
-    #     return pngify(imgarr=labels,
-    #                   vmin=0,
-    #                   vmax=self.get_max_label(),
-    #                   cmap=self.color_map)
 
     def get_diff(self, frame):
         """Compute the difference in labels between the input and output for the current frame."""
