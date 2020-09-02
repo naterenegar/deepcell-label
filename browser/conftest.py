@@ -8,7 +8,7 @@ import pytest
 from pytest_lazyfixture import lazy_fixture
 
 from application import create_app  # pylint: disable=C0413
-from files import CalibanFile
+from images import CalibanImage
 
 # flask-sqlalchemy fixtures from http://alexmic.net/flask-sqlalchemy-pytest/
 
@@ -93,17 +93,17 @@ def repeat_frame(frame, n):
 
 
 @pytest.fixture(params=TEST_FRAMES, ids=TEST_NAMES)
-def zstack_file(mocker, request):
+def zstack_image(mocker, request):
     def load(self):
         data = {'raw': np.zeros((FRAMES, HEIGHT, WIDTH, CHANNELS))}
         data['annotated'] = repeat_frame(repeat_feature(request.param, FEATURES), FRAMES)
         return data
-    mocker.patch('files.CalibanFile.load', load)
-    return CalibanFile('filename.npz', 'bucket', 'path')
+    mocker.patch('images.CalibanImage.load', load)
+    return CalibanImage('filename.npz', 'bucket', 'path')
 
 
 @pytest.fixture(params=TEST_FRAMES, ids=TEST_NAMES)
-def track_file(mocker, request):
+def track_image(mocker, request):
     def load(self):
         data = {'raw': np.zeros((FRAMES, HEIGHT, WIDTH, CHANNELS))}
         data['tracked'] = repeat_frame(repeat_feature(request.param, 1), FRAMES)
@@ -116,13 +116,13 @@ def track_file(mocker, request):
                     for label in np.unique(request.param) if label != 0}]
         data['lineages'] = lineages
         return data
-    mocker.patch('files.CalibanFile.load', load)
-    return CalibanFile('filename.trk', 'bucket', 'path')
+    mocker.patch('images.CalibanImage.load', load)
+    return CalibanImage('filename.trk', 'bucket', 'path')
 
 
 @pytest.fixture(params=[
-    lazy_fixture('zstack_file'),
-    lazy_fixture('track_file'),
+    lazy_fixture('zstack_image'),
+    lazy_fixture('track_image'),
 ])
-def file_(request):
+def image(request):
     return request.param

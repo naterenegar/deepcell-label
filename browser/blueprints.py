@@ -22,7 +22,7 @@ from flask import current_app
 from werkzeug.exceptions import HTTPException
 
 from helpers import is_trk_file, is_npz_file
-from files import CalibanFile
+from images import CalibanImage
 from models import Project
 from caliban import TrackEdit, ZStackEdit
 from feedback import Feedback
@@ -212,8 +212,8 @@ def load(filename):
         return jsonify(error), 400
 
     # Initate Edit object and entry in database
-    caliban_file = CalibanFile(filename, input_bucket, full_path)
-    edit = get_edit(caliban_file, output_bucket, rgb)
+    image = CalibanImage(filename, input_bucket, full_path)
+    edit = get_edit(image, output_bucket, rgb)
     project = Project.create_project(filename, edit, subfolders)
 
     if is_trk_file(filename):
@@ -221,9 +221,9 @@ def load(filename):
                                  filename, timeit.default_timer() - start)
         # Send attributes to .js file
         return jsonify({
-            'max_frames': caliban_file.max_frames,
-            'tracks': caliban_file.readable_tracks,
-            'dimensions': (caliban_file.width, caliban_file.height),
+            'max_frames': image.max_frames,
+            'tracks': image.readable_tracks,
+            'dimensions': (image.width, image.height),
             'project_id': project.id,
             'screen_scale': edit.scale_factor
         })
@@ -233,11 +233,11 @@ def load(filename):
                                  filename, timeit.default_timer() - start)
         # Send attributes to .js file
         return jsonify({
-            'max_frames': caliban_file.max_frames,
-            'channel_max': caliban_file.channel_max,
-            'feature_max': caliban_file.feature_max,
-            'tracks': caliban_file.readable_tracks,
-            'dimensions': (caliban_file.width, caliban_file.height),
+            'max_frames': image.max_frames,
+            'channel_max': image.channel_max,
+            'feature_max': image.feature_max,
+            'tracks': image.readable_tracks,
+            'dimensions': (image.width, image.height),
             'project_id': project.id
         })
 
@@ -403,19 +403,19 @@ def load_feedback(filename):
         rgb = request.args.get('rgb', default='false', type=str)
         rgb = bool(distutils.util.strtobool(rgb))
         # Initate ZStackReview object and entry in database
-        input_file = CalibanFile(filename, input_bucket, full_path)
-        output_file = CalibanFile(filename, output_bucket, full_path)
-        feedback = Feedback(input_file, output_file)
+        input_img = CalibanImage(filename, input_bucket, full_path)
+        output_img = CalibanImage(filename, output_bucket, full_path)
+        feedback = Feedback(input_img, output_img)
         project = Project.create_project(filename, feedback, subfolders)
         current_app.logger.debug('Loaded npz feedback file "%s" in %s s.',
                                  filename, timeit.default_timer() - start)
         # Send attributes to .js file
         return jsonify({
-            'max_frames': input_file.max_frames,
-            'channel_max': input_file.channel_max,
-            'feature_max': input_file.feature_max,
-            'tracks': input_file.readable_tracks,
-            'dimensions': (input_file.width, input_file.height),
+            'max_frames': input_img.max_frames,
+            'channel_max': input_img.channel_max,
+            'feature_max': input_img.feature_max,
+            'tracks': input_img.readable_tracks,
+            'dimensions': (input_img.width, input_img.height),
             'project_id': project.id
         })
 

@@ -1,4 +1,4 @@
-"""Classes to view and edit CalibanFiles"""
+"""Classes to view and edit CalibanImages"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -29,8 +29,8 @@ class View(object):  # pylint: disable=useless-object-inheritance
     Implements everything but actions that edit labels.
     """
 
-    def __init__(self, file_, rgb=False):
-        self.file = file_
+    def __init__(self, img, rgb=False):
+        self.img = img
 
         self.current_frame = 0
         self.scale_factor = 1
@@ -51,11 +51,11 @@ class View(object):  # pylint: disable=useless-object-inheritance
 
     @property
     def raw(self):
-        return self.file.raw
+        return self.img.raw
 
     @property
     def annotated(self):
-        return self.file.annotated
+        return self.img.annotated
 
     def rescale_95(self, img):
         """Rescale a single- or multi-channel image."""
@@ -140,7 +140,7 @@ class View(object):  # pylint: disable=useless-object-inheritance
         Returns:
             int: highest label in the current feature
         """
-        return self.file_.get_max_label(self.feature)
+        return self.img.get_max_label(self.feature)
 
     def reduce_to_RGB(self):
         """
@@ -154,10 +154,10 @@ class View(object):  # pylint: disable=useless-object-inheritance
         """
         rescaled = self.rescale_raw()
         # rgb starts as uint16 so it can handle values above 255 without overflow
-        rgb_img = np.zeros((self.file.height, self.file.width, 3), dtype='uint16')
+        rgb_img = np.zeros((self.img.height, self.img.width, 3), dtype='uint16')
 
         # for each of the channels that we have
-        for c in range(min(6, self.file.channel_max)):
+        for c in range(min(6, self.img.channel_max)):
             # straightforward RGB -> RGB
             new_channel = (rescaled[..., c]).astype('uint16')
             if c < 3:
@@ -188,10 +188,10 @@ class View(object):  # pylint: disable=useless-object-inheritance
         Returns:
             np.array
         """
-        rescaled = np.zeros((self.file.height, self.file.width, self.file.channel_max),
+        rescaled = np.zeros((self.img.height, self.img.width, self.img.channel_max),
                             dtype='uint8')
         # this approach allows noise through
-        for channel in range(min(6, self.file.channel_max)):
+        for channel in range(min(6, self.img.channel_max)):
             raw_channel = self.raw[self.current_frame, ..., channel]
             if np.sum(raw_channel) != 0:
                 rescaled[..., channel] = self.rescale_95(raw_channel)
@@ -216,9 +216,9 @@ class View(object):  # pylint: disable=useless-object-inheritance
         Raises:
             ValueError: if channel is not in [0, channel_max)
         """
-        if channel < 0 or channel > self.file.channel_max - 1:
+        if channel < 0 or channel > self.img.channel_max - 1:
             raise ValueError('Channel {} is outside of range [0, {}].'.format(
-                channel, self.file.channel_max - 1))
+                channel, self.img.channel_max - 1))
         self.channel = channel
         self._x_changed = True
 
@@ -232,9 +232,9 @@ class View(object):  # pylint: disable=useless-object-inheritance
         Raises:
             ValueError: if feature is not in [0, feature_max)
         """
-        if feature < 0 or feature > self.file.feature_max - 1:
+        if feature < 0 or feature > self.img.feature_max - 1:
             raise ValueError('Feature {} is outside of range [0, {}].'.format(
-                feature, self.file.feature_max - 1))
+                feature, self.img.feature_max - 1))
         self.feature = feature
         self._y_changed = True
 
@@ -340,7 +340,7 @@ class BaseEdit(View):
 
             brush_area = circle(y_loc, x_loc,
                                 brush_size // self.scale_factor,
-                                (self.file.height, self.file.width))
+                                (self.img.height, self.img.width))
 
             # do not overwrite or erase labels other than the one you're editing
             if not erase:
@@ -556,7 +556,7 @@ class ZStackEdit(BaseEdit):
         for frame in self.annotated[start_frame:, ..., self.feature]:
             frame[frame == old_label] = new_label
 
-        for frame in range(self.file.max_frames):
+        for frame in range(self.img.max_frames):
             if new_label in self.annotated[frame, ..., self.feature]:
                 self.del_cell_info(del_label=old_label, frame=frame)
                 self.add_cell_info(add_label=new_label, frame=frame)
@@ -581,7 +581,7 @@ class ZStackEdit(BaseEdit):
         are different before sending action
         """
         # check each frame
-        for frame in range(self.file.max_frames):
+        for frame in range(self.img.max_frames):
             annotated = self.annotated[frame, ..., self.feature]
             # if label being replaced is present, remove it from image and update cell info dict
             if np.any(np.isin(annotated, label_2)):
@@ -600,10 +600,10 @@ class ZStackEdit(BaseEdit):
             self.annotated[frame, ..., self.feature] = ann_img
 
         # update cell_info
-        cell_info_1 = self.file.cell_info[self.feature][label_1].copy()
-        cell_info_2 = self.file.cell_info[self.feature][label_2].copy()
-        self.file.cell_info[self.feature][label_1]['frames'] = cell_info_2['frames']
-        self.file.cell_info[self.feature][label_2]['frames'] = cell_info_1['frames']
+        cell_info_1 = self.img.cell_info[self.feature][label_1].copy()
+        cell_info_2 = self.img.cell_info[self.feature][label_2].copy()
+        self.img.cell_info[self.feature][label_1]['frames'] = cell_info_2['frames']
+        self.img.cell_info[self.feature][label_2]['frames'] = cell_info_1['frames']
 
         self._y_changed = self.info_changed = True
 
@@ -652,8 +652,8 @@ class ZStackEdit(BaseEdit):
         store_npz.seek(0)
 
         # store npz file object in bucket/path
-        s3 = self.file._get_s3_client()
-        s3.upload_fileobj(store_npz, self.output_bucket, self.file.path)
+        s3 = self.img._get_s3_client()
+        s3.upload_fileobj(store_npz, self.output_bucket, self.img.path)
 
     def add_cell_info(self, add_label, frame):
         """Add a cell to the npz"""
@@ -661,18 +661,18 @@ class ZStackEdit(BaseEdit):
         add_label = int(add_label)
 
         try:
-            old_frames = self.file.cell_info[self.feature][add_label]['frames']
+            old_frames = self.img.cell_info[self.feature][add_label]['frames']
             updated_frames = np.append(old_frames, frame)
             updated_frames = np.unique(updated_frames).tolist()
-            self.file.cell_info[self.feature][add_label]['frames'] = updated_frames
+            self.img.cell_info[self.feature][add_label]['frames'] = updated_frames
         # cell does not exist anywhere in npz:
         except KeyError:
-            self.file.cell_info[self.feature][add_label] = {
+            self.img.cell_info[self.feature][add_label] = {
                 'label': str(add_label),
                 'frames': [frame],
                 'slices': ''
             }
-            self.file.cell_ids[self.feature] = np.append(self.file.cell_ids[self.feature],
+            self.img.cell_ids[self.feature] = np.append(self.img.cell_ids[self.feature],
                                                          add_label)
 
         # if adding cell, frames and info have necessarily changed
@@ -681,24 +681,24 @@ class ZStackEdit(BaseEdit):
     def del_cell_info(self, del_label, frame):
         """Remove a cell from the npz"""
         # remove cell from frame
-        old_frames = self.file.cell_info[self.feature][del_label]['frames']
+        old_frames = self.img.cell_info[self.feature][del_label]['frames']
         updated_frames = np.delete(old_frames, np.where(old_frames == np.int64(frame))).tolist()
-        self.file.cell_info[self.feature][del_label]['frames'] = updated_frames
+        self.img.cell_info[self.feature][del_label]['frames'] = updated_frames
 
         # if that was the last frame, delete the entry for that cell
-        if self.file.cell_info[self.feature][del_label]['frames'] == []:
-            del self.file.cell_info[self.feature][del_label]
+        if self.img.cell_info[self.feature][del_label]['frames'] == []:
+            del self.img.cell_info[self.feature][del_label]
 
             # also remove from list of cell_ids
-            ids = self.file.cell_ids[self.feature]
-            self.file.cell_ids[self.feature] = np.delete(ids, np.where(ids == np.int64(del_label)))
+            ids = self.img.cell_ids[self.feature]
+            self.img.cell_ids[self.feature] = np.delete(ids, np.where(ids == np.int64(del_label)))
 
         # if deleting cell, frames and info have necessarily changed
         self._y_changed = self.info_changed = True
 
     def create_cell_info(self, feature):
         """Make or remake the entire cell info dict"""
-        self.file.create_cell_info(feature)
+        self.img.create_cell_info(feature)
         self.info_changed = True
 
 
@@ -722,8 +722,8 @@ class TrackEdit(BaseEdit):
                 frame[frame == old_label] = new_label
 
             # replace fields
-            track_old = self.file.tracks[old_label]
-            track_new = self.file.tracks[new_label] = {}
+            track_old = self.img.tracks[old_label]
+            track_new = self.img.tracks[new_label] = {}
 
             idx = track_old['frames'].index(start_frame)
 
@@ -737,7 +737,7 @@ class TrackEdit(BaseEdit):
             # only add daughters if they aren't in the same frame as the new track
             track_new['daughters'] = []
             for d in track_old['daughters']:
-                if start_frame not in self.file.tracks[d]['frames']:
+                if start_frame not in self.img.tracks[d]['frames']:
                     track_new['daughters'].append(d)
 
             track_new['frame_div'] = track_old['frame_div']
@@ -754,8 +754,8 @@ class TrackEdit(BaseEdit):
         """
         label_1 gave birth to label_2
         """
-        track_1 = self.file.tracks[label_1]
-        track_2 = self.file.tracks[label_2]
+        track_1 = self.img.tracks[label_1]
+        track_2 = self.img.tracks[label_2]
 
         last_frame_parent = max(track_1['frames'])
         first_frame_daughter = min(track_2['frames'])
@@ -779,18 +779,18 @@ class TrackEdit(BaseEdit):
         Replacing label_2 with label_1
         """
         # replace arrays
-        for frame in range(self.file.max_frames):
+        for frame in range(self.img.max_frames):
             annotated = self.annotated[frame]
             annotated = np.where(annotated == label_2, label_1, annotated)
             self.annotated[frame] = annotated
 
         # TODO: is this the same as add/remove?
         # replace fields
-        track_1 = self.file.tracks[label_1]
-        track_2 = self.file.tracks[label_2]
+        track_1 = self.img.tracks[label_1]
+        track_2 = self.img.tracks[label_2]
 
         for d in track_1['daughters']:
-            self.file.tracks[d]['parent'] = None
+            self.img.tracks[d]['parent'] = None
 
         track_1['frames'].extend(track_2['frames'])
         track_1['frames'] = sorted(set(track_1['frames']))
@@ -798,8 +798,8 @@ class TrackEdit(BaseEdit):
         track_1['frame_div'] = track_2['frame_div']
         track_1['capped'] = track_2['capped']
 
-        del self.file.tracks[label_2]
-        for _, track in self.file.tracks.items():
+        del self.img.tracks[label_2]
+        for _, track in self.img.tracks.items():
             try:
                 track['daughters'].remove(label_2)
             except ValueError:
@@ -813,15 +813,15 @@ class TrackEdit(BaseEdit):
                 frame[frame == old_label] = new_label
 
             # replace fields
-            track_new = self.file.tracks[new_label] = self.file.tracks[old_label]
+            track_new = self.img.tracks[new_label] = self.img.tracks[old_label]
             track_new['label'] = new_label
-            del self.file.tracks[old_label]
+            del self.img.tracks[old_label]
 
             for d in track_new['daughters']:
-                self.file.tracks[d]['parent'] = new_label
+                self.img.tracks[d]['parent'] = new_label
 
             if track_new['parent'] is not None:
-                parent_track = self.file.tracks[track_new['parent']]
+                parent_track = self.img.tracks[track_new['parent']]
                 parent_track['daughters'].remove(old_label)
                 parent_track['daughters'].append(new_label)
 
@@ -834,18 +834,18 @@ class TrackEdit(BaseEdit):
     def action_save_track(self):
         # clear any empty tracks before saving file
         empty_tracks = []
-        for key in self.file.tracks:
-            if not self.file.tracks[key]['frames']:
-                empty_tracks.append(self.file.tracks[key]['label'])
+        for key in self.img.tracks:
+            if not self.img.tracks[key]['frames']:
+                empty_tracks.append(self.img.tracks[key]['label'])
         for track in empty_tracks:
-            del self.file.tracks[track]
+            del self.img.tracks[track]
 
         # create file object in memory instead of writing to disk
         trk_file_obj = io.BytesIO()
 
         with tarfile.open(fileobj=trk_file_obj, mode='w') as trks:
             with tempfile.NamedTemporaryFile('w') as lineage_file:
-                json.dump(self.file.tracks, lineage_file, indent=1)
+                json.dump(self.img.tracks, lineage_file, indent=1)
                 lineage_file.flush()
                 trks.add(lineage_file.name, 'lineage.json')
 
@@ -861,8 +861,8 @@ class TrackEdit(BaseEdit):
         try:
             # go to beginning of file object
             trk_file_obj.seek(0)
-            s3 = self.file._get_s3_client()
-            s3.upload_fileobj(trk_file_obj, self.output_bucket, self.file.path)
+            s3 = self.img._get_s3_client()
+            s3.upload_fileobj(trk_file_obj, self.output_bucket, self.img.path)
 
         except Exception as e:
             print('Something Happened: ', e, file=sys.stderr)
@@ -873,13 +873,13 @@ class TrackEdit(BaseEdit):
         # if cell already exists elsewhere in trk:
         add_label = int(add_label)
         try:
-            old_frames = self.file.tracks[add_label]['frames']
+            old_frames = self.img.tracks[add_label]['frames']
             updated_frames = np.append(old_frames, frame)
             updated_frames = np.unique(updated_frames).tolist()
-            self.file.tracks[add_label]['frames'] = updated_frames
+            self.img.tracks[add_label]['frames'] = updated_frames
         # cell does not exist anywhere in trk:
         except KeyError:
-            self.file.tracks[add_label] = {
+            self.img.tracks[add_label] = {
                 'label': int(add_label),
                 'frames': [frame],
                 'daughters': [],
@@ -887,7 +887,7 @@ class TrackEdit(BaseEdit):
                 'parent': None,
                 'capped': False,
             }
-            self.file.cell_ids[self.feature] = np.append(self.file.cell_ids[self.feature],
+            self.img.cell_ids[self.feature] = np.append(self.img.cell_ids[self.feature],
                                                          add_label)
 
         self._y_changed = self.info_changed = True
@@ -895,20 +895,20 @@ class TrackEdit(BaseEdit):
     def del_cell_info(self, del_label, frame):
         """Remove a cell from the trk"""
         # remove cell from frame
-        old_frames = self.file.tracks[del_label]['frames']
+        old_frames = self.img.tracks[del_label]['frames']
         updated_frames = np.delete(old_frames, np.where(old_frames == np.int64(frame))).tolist()
-        self.file.tracks[del_label]['frames'] = updated_frames
+        self.img.tracks[del_label]['frames'] = updated_frames
 
         # if that was the last frame, delete the entry for that cell
-        if self.file.tracks[del_label]['frames'] == []:
-            del self.file.tracks[del_label]
+        if self.img.tracks[del_label]['frames'] == []:
+            del self.img.tracks[del_label]
 
             # also remove from list of cell_ids
-            ids = self.file.cell_ids[self.feature]
-            self.file.cell_ids[self.feature] = np.delete(ids, np.where(ids == np.int64(del_label)))
+            ids = self.img.cell_ids[self.feature]
+            self.img.cell_ids[self.feature] = np.delete(ids, np.where(ids == np.int64(del_label)))
 
             # If deleting lineage data, remove parent/daughter entries
-            for _, track in self.file.tracks.items():
+            for _, track in self.img.tracks.items():
                 try:
                     track['daughters'].remove(del_label)
                 except ValueError:
