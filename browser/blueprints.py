@@ -439,7 +439,7 @@ def get_feedback_frame(source, frame, project_id):
         return jsonify({'error': 'project_id not found'}), 404
 
     state = load_project_state(project)
-    state.change_view(source)
+    state.change_img(source)
     img = state.get_frame(frame, raw=False)
     if source == 'diff':
         img = state.get_diff(frame)
@@ -455,7 +455,7 @@ def get_feedback_frame(source, frame, project_id):
 
     return jsonify(payload)
 
-    
+
 # Factory for Edit objects
 def get_edit(file_, output_bucket, rgb):
     if is_npz_file(file_.filename):
