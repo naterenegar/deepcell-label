@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import numpy as np
 from matplotlib import pyplot as plt
+from skimage.segmentation import find_boundaries
 
 from caliban import View
 from imgutils import pngify
@@ -12,8 +13,6 @@ from imgutils import pngify
 
 class Feedback(View):
     """Class to view feedback from quality control on zstack images."""
-
-    # TODO: @tddough98 replace input_img/output_img with worker_img/qc_img
     def __init__(self, input_img, output_img):
 
         self.input_img = input_img
@@ -22,9 +21,16 @@ class Feedback(View):
 
         super(Feedback, self).__init__(input_img)
 
-        self.diff_cmap = plt.get_cmap('Dark2')
+        self.color_map.set_under(color='white')
 
     def change_view(self, source):
+        """
+        Changes the img attribute used to access image data.
+
+        Args:
+            source (str): expects 'input' or 'output'
+                          assumes 'output' if not 'input'
+        """
         self._y_changed = True
         self.view_input = source == 'input'
         if source == 'input':
@@ -33,128 +39,110 @@ class Feedback(View):
             self.img = self.output_img
 
     def get_max_label(self):
+        """
+        Returns:
+            int: maximum label for the current feature between both
+                 input and output labels
+        """
         input_max = self.input_img.get_max_label(self.feature)
         output_max = self.output_img.get_max_label(self.feature)
         return max(input_max, output_max)
+    
+    def get_input_frame(self):
+        """
+        Returns:
+            ndarray: input labels for the current frame and feature
+        """
+        return self.input_img.annotated[self.current_frame, ..., self.feature]
+    
+    def get_output_frame(self):
+        """
+        Returns:
+            ndarray: output labels for the current frame and feature
+        """
+        return self.output_img.annotated[self.current_frame, ..., self.feature]
+
+    def deleted_mask(self):
+        """
+        Returns:
+            ndarray: 2d mask array that is False for deleted label area
+        """
+        input_frame = self.get_input_frame()
+        output_frame = self.get_output_frame()
+        return ~((input_frame != 0) & (output_frame == 0))
+
+    def added_mask(self):
+        """
+        Returns:
+            ndarray: 2d mask array that is False for added label area
+        """
+        input_frame = self.get_input_frame()
+        output_frame = self.get_output_frame()
+        return ~((input_frame == 0) & (output_frame != 0))
+
+    def conv_mask(self):
+        """
+        Returns:
+            ndarray: 2d mask array that is False for converted label area
+        """
+        input_frame = self.get_input_frame()
+        output_frame = self.get_output_frame()
+        return ~((input_frame != output_frame) & (input_frame != 0) & (output_frame != 0))
+
+    def deleted_diff(self):
+        """Show the deleted label diff by outlining the deleted areas with the original
+        label color."""
+        input_frame = self.get_input_frame()
+        # frame = frame.astype(np.int16) ??
+        mask = self.deleted_mask()
+        boundary = find_boundaries(mask, mode='outer')
+        outlined = np.where(boundary == 1, input_frame, 0)
+        # Mask the everywhere but the boundary
+        return np.ma.array(outlined, mask=~boundary)
+
+    def added_diff(self):
+        """
+        Show the added label diff by outlining the added areas with the new
+        label color.
+        """
+        output_frame = self.get_output_frame()
+        # frame = frame.astype(np.int16) ??
+        mask = self.added_mask()
+        boundary = find_boundaries(mask, mode='outer')
+        outlined = np.where(boundary == 1, output_frame, -1)  # -1 represents new label area
+        # Mask the non added area
+        return np.ma.array(outlined, mask=mask)
+
+    def conv_diff(self):
+        """
+        Show the converted label diff by outlining the converted areas with the new
+        label color.
+        """
+        input_frame = self.get_input_frame()
+        output_frame = self.get_output_frame()
+        # frame = frame.astype(np.int16) ??
+        mask = self.conv_mask()
+        boundary = find_boundaries(mask, mode='outer')
+        outlined = np.where(boundary == 1, output_frame, input_frame)
+        # Mask the non added area
+        return np.ma.array(outlined, mask=mask)
 
     def get_diff(self, frame):
-        """Compute the difference in labels between the input and output for the current frame."""
+        """Combine all diffs into one frame"""
         self.current_frame = frame
-        labels = self.input_img.annotated[frame, ..., self.feature]
-        labels_qc = self.output_img.annotated[frame, ..., self.feature]
-
-        # Create boolean arrays to show each type of change
-        merged = merged_area(labels, labels_qc)
-        split = split_area(labels, labels_qc)
-        added = added_area(labels, labels_qc)
-        deleted = deleted_area(labels, labels_qc)
-        grown = grown_area(labels, labels_qc)
-        shrunk = shrunk_area(labels, labels_qc)
-        converted = converted_area(labels, labels_qc)
-
-        # all_changes = added | deleted | grown | shrunk | converted
-
-        # Combine diff types
-        diff = np.zeros(labels.shape)
-        diff[converted] = 1
-        diff[added] = 2
-        diff[deleted] = 3
-        diff[merged] = 4
-        diff[split] = 5
-        diff[grown] = 6
-        diff[shrunk] = 7
-
-        # Mask zero values
-        diff = np.ma.array(diff, mask=diff == 0)
-
+        added = self.added_diff()
+        deleted = self.deleted_diff()
+        conv = self.conv_diff()
+        # # Check for overlap between area
+        # if (~(added.mask | deleted.mask) | ~(added.mask | conv.mask) | ~(deleted.mask | conv.mask)).any():
+        #     raise(ValueError("Ambiguous differences between input and output"))
+        diff_vals = added.filled(0) + deleted.filled(0) + conv.filled(0)
+        diff_mask = added.mask & deleted.mask & conv.mask
+        diff = np.ma.array(diff_vals, mask=diff_mask)
         return pngify(imgarr=diff,
-                      vmin=1,
-                      vmax=self.diff_cmap.N,
-                      cmap=self.diff_cmap)
-
-    def get_stats(self, frame):
-        """
-        Returns a dictionary of statistics about changed labels.
-        """
-        # Get the input and output labelings
-        labels = self.input_img.annotated[frame, ..., self.feature]
-        labels_qc = self.output_img.annotated[frame, ..., self.feature]
-
-        # Create boolean arrays to show each type of change
-        merged = merged_area(labels, labels_qc)
-        split = split_area(labels, labels_qc)
-        added = added_area(labels, labels_qc)
-        deleted = deleted_area(labels, labels_qc)
-        grown = grown_area(labels, labels_qc)
-        shrunk = shrunk_area(labels, labels_qc)
-        converted = converted_area(labels, labels_qc)
-
-        stats = {}
-
-        stats['label_count'], stats['qc_count'] = total_labels(labels, labels_qc)
-
-        return stats
-
-
-def total_labels(input_labels, output_labels):
-    """Returns the number of unique labels in the input and output labelings."""
-    # 0 is the absence of a label
-    input_uniq = np.unique(input_labels[input_labels != 0])
-    output_uniq = np.unique(output_labels[output_labels != 0])
-    return input_uniq.shape[0], output_uniq.shape[0]
-
-
-def merged_area(input_labels, output_labels):
-    """Returns a boolean numpy array that is True where
-    two labels have been combined into one label."""
-    # Find where output labels cover deleted labels
-    area = deleted_area(input_labels, output_labels) & (output_labels != 0)
-    # Merged area covers the entire label, not just the "subsumed" label
-    area = np.isin(output_labels, output_labels[area])
-    return area
-
-
-def split_area(input_labels, output_labels):
-    """Returns a boolean numpy array that is True where one label has been split into two labels."""
-    # Find where input labels cover added labels
-    area = added_area(input_labels, output_labels) & (input_labels != 0)
-    # Split area should include both labels, not just the new label
-    area = np.isin(input_labels, input_labels[area])
-    return area
-
-
-def added_area(input_labels, output_labels):
-    """Returns a boolean numpy array that is True where cells have been added."""
-    return ~np.isin(output_labels, input_labels)
-
-
-def deleted_area(input_labels, output_labels):
-    """Returns a boolean numpy array that is True where cells have been deleted."""
-    return ~np.isin(input_labels, output_labels)
-
-
-def grown_area(input_labels, output_labels):
-    """Returns a boolean numpy array that is True where labels have expanded."""
-    area = (input_labels == 0) & (output_labels != 0)
-    # Remove new labels
-    added = added_area(input_labels, output_labels)
-    area = area & ~added
-    return area
-
-
-def shrunk_area(input_labels, output_labels):
-    """Returns a boolean numpy array that is True where labels have shrunk."""
-    area = (input_labels != 0) & (output_labels == 0)
-    # Remove deleted labels
-    deleted = deleted_area(input_labels, output_labels)
-    area = area & ~deleted
-    return area
-
-
-def converted_area(input_labels, output_labels):
-    """Returns a boolean numpy array that is True area with converted labels."""
-    area = (input_labels != output_labels) & (input_labels != 0) & (output_labels != 0)
-    return area
+                      vmin=0,
+                      vmax=self.get_max_label(),
+                      cmap=self.color_map)
 
 
 def labels_in_area(labels, area):
