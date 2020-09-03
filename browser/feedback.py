@@ -17,26 +17,25 @@ class Feedback(View):
 
         self.input_img = input_img
         self.output_img = output_img
-        self.view_input = True
 
         super(Feedback, self).__init__(input_img)
 
         self.color_map.set_under(color='white')
 
-    def change_view(self, source):
+    def change_img(self, source):
         """
-        Changes the img attribute used to access image data.
+        Changes the img attribute from the View class.
 
         Args:
             source (str): expects 'input' or 'output'
                           assumes 'output' if not 'input'
         """
         self._y_changed = True
-        self.view_input = source == 'input'
         if source == 'input':
             self.img = self.input_img
         else:
             self.img = self.output_img
+
 
     def get_max_label(self):
         """
