@@ -154,20 +154,20 @@ Mode.prototype.handle_universal_keybind = function (key) {
     changeZoom(1);
   } else if (key === '=') {
     changeZoom(-1);
-  } else if (key === 't') {
+  } else if (key === 'q') {
     toggleFeedbackView();
+  } else if (key === 'Q') {
+    toggleFeedbackView(backward=true);
   }
 }
 
 // new functions below here
 
-// TODO: @tddough98 don't use global variable
-var source = 'input';
-
-function fetchAndRenderDiff(source) {
+function fetchAndRenderDiff() {
+  let image = output ? 'output' : 'input';
   $.ajax({
     type: 'GET',
-    url: document.location.origin +  "/feedback/" + source + "/" + current_frame + "/" + project_id,
+    url: `${document.location.origin}/feedback/${image}/${current_frame}/${project_id}?diff=${diff}`,
     success: function(payload) {
       adjuster.segLoaded = false;
 
@@ -180,19 +180,24 @@ function fetchAndRenderDiff(source) {
   });
 }
 
-function toggleFeedbackView() {
-  if (source === 'input') {
-    source = 'output';
-  } else if (source === 'output') {
-    source = 'diff';
-    document.getElementById('label_change_legend').style.display = 'block';
-  } else if (source === 'diff') {
-    source = 'input';
-    document.getElementById('label_change_legend').style.display = 'none';
-  }
-  fetchAndRenderDiff(source);
-}
+// TODO: @tddough98 don't use global variable
+var output = false;
+var diff = false;
 
+function toggleFeedbackView(backward=false) {
+  // Toggle second, diff bit
+  if (output & !backward) {
+    diff = !diff;
+  } else if (!output & backward) {
+    diff = !diff;
+  }
+  
+  // Toggle first, input/output bit each step
+  output = !output;
+  // Show diff legend if diff
+  document.getElementById('label_change_legend').style.display = diff ? 'block' : 'none';
+  fetchAndRenderDiff();
+}
 
 
 function loadFeedback(file, rgb = false, cb) {
