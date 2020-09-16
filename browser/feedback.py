@@ -87,6 +87,15 @@ class Feedback(View):
         input_frame = self.get_input_frame()
         output_frame = self.get_output_frame()
         return ~((input_frame != output_frame) & (input_frame != 0) & (output_frame != 0))
+    
+    def unchanged_mask(self):
+        """
+        Returns:
+            ndarray: 2d mask array that is False where labels are unchanged
+        """
+        input_frame = self.get_input_frame()
+        output_frame = self.get_output_frame()
+        return ~((input_frame == output_frame) & (input_frame != 0))
 
     def deleted_diff(self):
         """Show the deleted label diff by outlining the deleted areas with the original
@@ -126,8 +135,15 @@ class Feedback(View):
         # Mask the non added area
         return np.ma.array(outlined, mask=mask)
 
-    def get_diff(self, frame):
-        """Combine all diffs into one frame"""
+    def get_diff(self, frame, labels=False):
+        """
+        Combine all diffs into one frame.
+        
+        Args:
+            frame (int): index of frame
+            labels (bool): whether to overlay the diff on top of labels (when True) 
+                           or show the diff alone (when False)
+        """
         self.current_frame = frame
         added = self.added_diff()
         deleted = self.deleted_diff()
@@ -138,6 +154,17 @@ class Feedback(View):
         diff_vals = added.filled(0) + deleted.filled(0) + conv.filled(0)
         diff_mask = added.mask & deleted.mask & conv.mask
         diff = np.ma.array(diff_vals, mask=diff_mask)
+        # Overlay the diff on top of labels
+        if labels:
+            labels = self.annotated[self.current_frame, ..., self.feature]
+            unchanged_mask = self.unchanged_mask()
+            unchanged = np.ma.array(labels, mask=unchanged_mask)
+            combined_vals = unchanged.filled(0) + diff.filled(0)
+            combined_mask = diff.mask & unchanged.mask
+            combined = np.ma.array(combined_vals, mask=combined_mask) 
+
+            diff = combined
+            
         return pngify(imgarr=diff,
                       vmin=0,
                       vmax=self.get_max_label(),

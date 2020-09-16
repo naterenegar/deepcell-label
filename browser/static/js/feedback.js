@@ -116,7 +116,7 @@ function startFeedback(filename, settings) {
 }
 
 
-// override keybind function in Mode to toggle between input, output and diff
+// override keybind function in Mode to toggle between input/output & diff
 Mode.prototype.handle_universal_keybind = function (key) {
   if (!rgb && (key === 'a' || key === 'ArrowLeft')) {
     // go backward one frame
@@ -197,7 +197,7 @@ function toggleFeedbackView(backward=false) {
   // Show diff legend if diff
   document.getElementById('label_change_legend').style.display = diff ? 'block' : 'none';
   fetchAndRenderDiff();
-}
+} 
 
 
 function loadFeedback(file, rgb = false, cb) {

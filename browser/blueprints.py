@@ -428,9 +428,15 @@ def load_feedback(filename):
 
 @bp.route('/feedback/<source>/<int:frame>/<int:project_id>')
 def get_feedback_frame(source, frame, project_id):
-    ''' Serve modes of diff frames as pngs. Send pngs and color mappings of
-        cells to .js file.
-    '''
+    """
+    Serve input labels, output labels, or label diff as pngs. 
+    Send pngs and color mappings of cells to .js file.
+
+    Args:
+        source (str): 'input' or 'output'
+        frame (int): index of frame to serve
+        project_id (int): 
+    """
     start = timeit.default_timer()
     # Use id to grab appropriate TrackReview/ZStackReview object from database
     project = Project.get_project_by_id(project_id)
@@ -440,9 +446,10 @@ def get_feedback_frame(source, frame, project_id):
 
     state = load_project_state(project)
     state.change_img(source)
-    img = state.get_frame(frame, raw=False)
-    if source == 'diff':
-        img = state.get_diff(frame)
+    if distutils.util.strtobool(request.args['diff']):
+        img = state.get_diff(frame, labels=source=='output')
+    else:
+        img = state.get_frame(frame, raw=False)
     edit_arr = state.get_array(frame)
     encode = lambda x: base64.encodebytes(x.read()).decode()
     payload = {
