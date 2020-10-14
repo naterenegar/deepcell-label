@@ -3403,7 +3403,7 @@ class ZStackReview(CalibanWindow):
         else:
             # adjust brightness of raw image, if looking at raw image
             # (also applies to edit mode if self.draw_raw is True)
-            if self.draw_raw:
+            if self.draw_raw or self.edit_mode:
                 # regular scrolling changes maximum brightness of image
                 if not self.key_states[key.LSHIFT] or self.key_states[key.RSHIFT]:
                     # self.max_intensity_dict[self.channel] has a value so we can adjust it
@@ -3426,8 +3426,8 @@ class ZStackReview(CalibanWindow):
                     self.min_intensity_dict[self.channel] = new_vmin
                     self.vmin = new_vmin
 
-            # adjusting colormap range of annotations
-            elif not self.draw_raw:
+            # adjusting colormap range of annotations--not while in pixel-editing mode
+            else:
                 # self.adjustment value for the current feature should never reduce possible colors to 0
                 if self.get_max_label() + (self.adjustment_dict[self.feature] - 1 * scroll_y) > 0:
                     self.adjustment_dict[self.feature] = self.adjustment_dict[self.feature] - 1 * scroll_y
