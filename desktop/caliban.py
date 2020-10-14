@@ -197,7 +197,7 @@ class CalibanWindow:
         viridis.set_bad('black')
         prism = plt.get_cmap('prism')
         prism.set_bad('black')
-        self.labels_cmap_options = [viridis, prism]
+        self.labels_cmap_options = [prism, viridis]
         self.current_label_cmap_idx = 0
         self.labels_cmap = self.labels_cmap_options[self.current_label_cmap_idx]
 
