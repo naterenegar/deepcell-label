@@ -3617,6 +3617,18 @@ class ZStackReview(CalibanWindow):
                     self.helper_update_composite()
                 self.update_image = True
 
+        # RESET IMAGE BRIGHTNESS ADJUSTMENTS
+        if symbol == key._0:
+            self.min_intensity_dict[self.channel] = 0
+            self.vmin = self.min_intensity_dict[self.channel]
+
+            current_raw = self.raw[self.current_frame, :, :, self.channel]
+            self.max_intensity_dict[self.channel] = np.max(current_raw)
+            self.max_intensity = self.max_intensity_dict[self.channel]
+
+            self.helper_update_composite()
+            self.update_image = True
+
     def edit_mode_none_keypress_helper(self, symbol, modifiers):
         '''
         Helper function for keypress handling. The keybinds that are
@@ -3766,7 +3778,7 @@ class ZStackReview(CalibanWindow):
         # TODO: add highlight cycling when cell not selected
         # check that highlighted cell != -1
 
-        # cycle through colormaps, but only while viewing raw
+        # adjustments specific to raw image
         if self.draw_raw:
 
             # INVERT RAW IMAGE LIGHT/DARK
@@ -3794,6 +3806,24 @@ class ZStackReview(CalibanWindow):
                     self.helper_update_composite()
                 self.update_image = True
 
+        # RESET IMAGE BRIGHTNESS ADJUSTMENTS
+        if symbol == key._0:
+            if self.draw_raw:
+                self.min_intensity_dict[self.channel] = 0
+                self.vmin = self.min_intensity_dict[self.channel]
+
+                current_raw = self.raw[self.current_frame, :, :, self.channel]
+                self.max_intensity_dict[self.channel] = np.max(current_raw)
+                self.max_intensity = self.max_intensity_dict[self.channel]
+
+            else:
+                self.adjustment_dict[self.feature] = 0
+                self.adjustment = self.adjustment_dict[self.feature]
+
+            self.helper_update_composite()
+            self.update_image = True
+
+        # change colormaps for either raw image or labels
         if modifiers & key.MOD_SHIFT:
             if symbol == key.UP:
                 if self.draw_raw:
