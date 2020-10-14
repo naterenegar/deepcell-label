@@ -225,6 +225,9 @@ class CalibanWindow:
         self.update_image = True
         self.update_brush_image = True
 
+        # recomposite full image if new label causes label cmap to shift
+        self.label_range_changed = False
+
     def on_resize(self, width, height):
         '''
         Event handler for when pyglet window changes size. Note: this
@@ -586,12 +589,19 @@ class CalibanWindow:
             # mouse release only has special behavior in pixel-editing mode; most custom
             # behavior during a mouse click is handled in the mouse press event
             if self.edit_mode:
-                self.comp_dy1, self.comp_dy2 = self.brush.dirty_y1, self.brush.dirty_y2
-                self.comp_dx1, self.comp_dx2 = self.brush.dirty_x1, self.brush.dirty_x2
                 # releasing the mouse finalizes bounding box for thresholding
                 if not self.brush.show and self.mode.action == "DRAW BOX":
                     self.handle_threshold()
                     # self.brush.show reset to True here, so brush preview will render
+
+                if not self.label_range_changed:
+                    self.comp_dy1, self.comp_dy2 = self.brush.dirty_y1, self.brush.dirty_y2
+                    self.comp_dx1, self.comp_dx2 = self.brush.dirty_x1, self.brush.dirty_x2
+                else:
+                    self.comp_dy1, self.comp_dy2 = None, None
+                    self.comp_dx1, self.comp_dx2 = None, None
+                # reset flag for recompositing full image
+                self.label_range_changed = False
 
                 # update brush view (prevents brush flickering)
                 self.brush.redraw_view()
@@ -1382,7 +1392,7 @@ class CalibanWindow:
 
         Uses:
             self.comp_dy1, dy2, dx1, dx2 to determine how much of image needs to
-                be updated
+                be updated, from brush dirty rectangle
             self.get_raw_current_frame and self.get_ann_current_frame (must be
                 provided by child class) to get appropriate slices of arrays
             self.apply_raw_image_adjustments to apply raw image filtering options
@@ -3302,6 +3312,8 @@ class ZStackReview(CalibanWindow):
             self.action_threshold_predict to carry out thresholding and annotation update
             self.brush.show and self.mode are reset at end to finish/clear thresholding behavior
         '''
+        old_max = self.get_max_label()
+
         # check to make sure box is actually a box and not a line
         y1, y2, x1, x2 = self.brush.get_box_coords()
         if y1 != y2 and x1 != x2:
@@ -3310,6 +3322,12 @@ class ZStackReview(CalibanWindow):
         # clear bounding box and Mode
         self.brush.reset()
         self.mode.clear()
+
+        new_max = self.get_max_label()
+
+        # if nothing was added by threshold_predict, this doesn't change
+        if new_max != old_max:
+            self.label_range_changed = True
 
     def handle_draw(self):
         '''
@@ -3331,6 +3349,8 @@ class ZStackReview(CalibanWindow):
             self.height and self.width to limit boundaries of brush (skimage.draw.circle)
 
         '''
+        old_max = self.get_max_label()
+
         annotated = self.get_ann_current_frame()
         brush_val_in_original = np.any(np.isin(annotated, self.brush.draw_value))
         editing_val_in_original = np.any(np.isin(annotated, self.brush.background))
@@ -3351,6 +3371,11 @@ class ZStackReview(CalibanWindow):
             self.add_cell_info(feature = self.feature, add_label = self.brush.draw_value, frame = self.current_frame)
 
         self.annotated[self.current_frame,:,:,self.feature] = annotated_draw
+
+        new_max = self.get_max_label()
+
+        if new_max != old_max:
+            self.label_range_changed = True
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         '''
