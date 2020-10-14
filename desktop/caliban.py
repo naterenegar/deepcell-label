@@ -981,7 +981,7 @@ class CalibanWindow:
         y1, y2, x1, x2 = self.visible_region
         ann_array = self.get_ann_current_frame()[y1:y2,x1:x2]
 
-        # annotations use cubehelix cmap with highlighting in red
+        # annotations use cmaps that need background set to black
         ann_array = np.ma.masked_equal(ann_array, 0)
 
         # create pyglet image
@@ -1284,7 +1284,8 @@ class CalibanWindow:
         highlighted_cell_one and highlighted_cell_two.
         '''
         # different highlight color depending on cmap
-        colors = [[255, 0, 0], [255, 255, 255]]
+        # TODO: have this connected to cmap object somehow instead of hardcoded
+        colors = [[255, 255, 255], [255, 0, 0]]
         h_color = colors[self.current_label_cmap_idx]
 
         # same highlight gets applied to up to two labels
