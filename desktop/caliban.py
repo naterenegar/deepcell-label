@@ -607,9 +607,8 @@ class CalibanWindow:
                 self.brush.redraw_view()
                 # annotation has changed (either during mouse drag for brush, or upon release
                 # for threshold), update the image composite with the current annotation
-                if not self.hide_annotations:
-                    self.helper_update_composite()
-                    self.update_image = True
+                self.helper_update_composite()
+                self.update_image = True
 
     def mouse_press_none_helper(self, modifiers, label):
         '''
@@ -3652,7 +3651,8 @@ class ZStackReview(CalibanWindow):
             self.max_intensity_dict[self.channel] = np.max(current_raw)
             self.max_intensity = self.max_intensity_dict[self.channel]
 
-            self.helper_update_composite()
+            if not self.hide_annotations:
+                self.helper_update_composite()
             self.update_image = True
 
     def edit_mode_none_keypress_helper(self, symbol, modifiers):
@@ -3940,7 +3940,6 @@ class ZStackReview(CalibanWindow):
         # ENTER EDIT MODE
         if symbol == key.E:
             self.edit_mode = True
-            # update composite with changes, if needed
             if not self.hide_annotations:
                 self.helper_update_composite()
             self.update_image = True
