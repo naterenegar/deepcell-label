@@ -3614,7 +3614,7 @@ class ZStackReview(CalibanWindow):
         # INVERT RAW IMAGE LIGHT/DARK
         if symbol == key.I:
             self.invert = not self.invert
-            # if you invert the image while you're viewing composite, update composite
+            self.channel_adjustments[self.channel]['invert'] = self.invert
             if not self.hide_annotations:
                 self.helper_update_composite()
             self.update_image = True
@@ -3622,6 +3622,7 @@ class ZStackReview(CalibanWindow):
         # TOGGLE SOBEL FILTER
         if symbol == key.K:
             self.sobel_on = not self.sobel_on
+            self.channel_adjustments[self.channel]['sobel_on'] = self.sobel_on
             if not self.hide_annotations:
                 self.helper_update_composite()
             self.update_image = True
@@ -3629,6 +3630,7 @@ class ZStackReview(CalibanWindow):
         # TOGGLE ADAPTIVE HISTOGRAM EQUALIZATION
         if symbol == key.J:
             self.adapthist_on = not self.adapthist_on
+            self.channel_adjustments[self.channel]['adapthist_on'] = self.adapthist_on
             if not self.hide_annotations:
                 self.helper_update_composite()
             self.update_image = True
@@ -3637,7 +3639,6 @@ class ZStackReview(CalibanWindow):
         if symbol == key.H:
             if modifiers & key.MOD_SHIFT:
                 self.hide_annotations = not self.hide_annotations
-                # in case any display changes have been made while hiding annotations
                 if not self.hide_annotations:
                     self.helper_update_composite()
                 self.update_image = True
