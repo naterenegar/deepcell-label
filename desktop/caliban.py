@@ -3811,25 +3811,18 @@ class ZStackReview(CalibanWindow):
             if symbol == key.I:
                 self.invert = not self.invert
                 self.channel_adjustments[self.channel]['invert'] = self.invert
-                # if you invert the image while you're viewing composite, update composite
-                if not self.hide_annotations:
-                    self.helper_update_composite()
                 self.update_image = True
 
             # TOGGLE SOBEL FILTER
             if symbol == key.K:
                 self.sobel_on = not self.sobel_on
                 self.channel_adjustments[self.channel]['sobel_on'] = self.sobel_on
-                if not self.hide_annotations:
-                    self.helper_update_composite()
                 self.update_image = True
 
             # TOGGLE ADAPTIVE HISTOGRAM EQUALIZATION
             if symbol == key.J:
                 self.adapthist_on = not self.adapthist_on
                 self.channel_adjustments[self.channel]['adapthist_on'] = self.adapthist_on
-                if not self.hide_annotations:
-                    self.helper_update_composite()
                 self.update_image = True
 
         # RESET IMAGE BRIGHTNESS ADJUSTMENTS
@@ -3846,7 +3839,6 @@ class ZStackReview(CalibanWindow):
                 self.adjustment_dict[self.feature] = 0
                 self.adjustment = self.adjustment_dict[self.feature]
 
-            self.helper_update_composite()
             self.update_image = True
 
         # change colormaps for either raw image or labels
