@@ -1407,7 +1407,7 @@ class CalibanWindow:
 
         # make whole composite image: only need to generate where there are labels
         if None in (dy1, dy2, dx1, dx2):
-            obj_list = ndimage.find_objects(current_ann)
+            obj_list = ndimage.find_objects(current_ann.astype(np.uint16))
             self.composite_view = np.copy(raw_RGB)
             for slice_obj in obj_list:
                 if slice_obj is not None:
