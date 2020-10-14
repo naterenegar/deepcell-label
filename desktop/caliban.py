@@ -1306,7 +1306,9 @@ class CalibanWindow:
         # apply adaptive histogram equalization, if option toggled
         if self.adapthist_on:
             # rescale first (for equalization to work properly, I think)
-            current_raw = rescale_intensity(current_raw, in_range = 'image', out_range = 'float')
+            current_raw = rescale_intensity(current_raw.astype(np.float32),
+                                            in_range='image',
+                                            out_range='float')
             current_raw = equalize_adapthist(current_raw)
             # vmax appropriate for new range of image
             vmin = 0
