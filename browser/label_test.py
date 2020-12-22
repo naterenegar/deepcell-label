@@ -155,6 +155,37 @@ class TestBaseEdit():
             assert edit.y_changed
             assert edit.labels_changed
 
+    def test_action_active_contour_other_labels_unchanged(self, app):
+        """
+        Tests that other labels not affected by active contouring a label
+        """
+        pass
+
+    def test_action_active_contour_label_too_small(self, app):
+        """
+        When the raw area is larger tha
+        """
+        pass
+
+    def test_action_active_contour_label_too_large(self, app):
+        """Tests that a label that is larger than the raw objects is made
+        smaller by active contouring."""
+        pass
+
+    def test_action_erode_delete_label(self, app):
+        """Tests that a label is correctly removed when eroding deletes all of its pixels."""
+        pass
+
+    def test_action_erode_other_labels_unchanged(self, app):
+        """Tests that other labels not affected by eroding a label."""
+        pass
+
+    def test_action_dilate_two_labels_present(self, app):
+        """Tests that other labels not affected by dilating a label."""
+        pass
+
+
+
 
 class TestZStackEdit():
 
