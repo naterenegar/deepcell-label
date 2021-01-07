@@ -6,13 +6,19 @@ from __future__ import print_function
 import base64
 import io
 import json
+import os
+import re
+import subprocess
 import sys
 import tarfile
 import tempfile
+import zipfile
 
 import numpy as np
 from matplotlib.colors import Normalize
+from PIL import Image
 from skimage import filters
+from skimage.external import tifffile
 from skimage.morphology import flood_fill, flood
 from skimage.morphology import watershed, dilation, disk, square, closing, erosion
 from skimage.draw import circle
@@ -699,6 +705,43 @@ class ZStackEdit(BaseEdit):
         # store npz file object in bucket/path
         s3 = self.project._get_s3_client()
         s3.upload_fileobj(store_npz, bucket, self.project.path)
+
+    def action_kiosk_job(self, host='deepcell.org', jobtype='segmentation'):
+        """
+        Launches a job on the DeepCell Kiosk to generate a segmentation
+        from the raw image
+        """
+        # Save raw image into a TIF and send to Kiosk
+        with tempfile.NamedTemporaryFile(suffix='.tif') as temp:
+            Image.fromarray(self.project.raw_array).save(temp)
+            process = subprocess.run(['python', '-m', 'kiosk_client', temp.name,
+                                    '--host', host,
+                                    '--job-type',jobtype],
+                                    capture_output=True)
+        
+        # Extract output filename from Kiosk job log
+        stdout = process.stdout.decode("utf-8")
+        zip_regex = r'Saved output file: "(.*\.zip)" in \d+.\d+ s.'
+        json_regex = r'Wrote job data as JSON to (.*\.json).\n'
+        zip_filename = re.search(zip_regex, stdout).group(1)
+        json_filename = re.search(json_regex, stdout).group(1)
+        # Extract label image from output
+        with zipfile.ZipFile(zip_filename) as archive:
+            entry = archive.infolist()[0]
+            with archive.open(entry) as f:
+                    label_array = tifffile.imread(f)
+        
+        # Put new label_array into Project
+        np.reshape(label_array, self.project.label_array.shape)
+        for frame in self.project.frames:
+            frame.frame = label_array[frame.frame_id, ...]
+        # Delete files created by Kiosk job
+        os.remove(zip_filename)
+        os.remove(json_filename)
+
+        # Remake cell_info dict based on new annotations
+        self.y_changed = True
+        self.remake_cell_info()
 
     def add_cell_info(self, add_label, frame):
         """Add a cell to the npz"""
