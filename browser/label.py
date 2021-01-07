@@ -711,9 +711,11 @@ class ZStackEdit(BaseEdit):
         Launches a job on the DeepCell Kiosk to generate a segmentation
         from the raw image
         """
+        # import pdb; pdb.set_trace()
         # Save raw image into a TIF and send to Kiosk
         with tempfile.NamedTemporaryFile(suffix='.tif') as temp:
-            Image.fromarray(self.project.raw_array).save(temp)
+            with tifffile.TiffWriter(temp) as writer:
+                writer.save(self.raw_frame[..., self.project.channel])
             process = subprocess.run(['python', '-m', 'kiosk_client', temp.name,
                                     '--host', host,
                                     '--job-type',jobtype],
@@ -729,12 +731,11 @@ class ZStackEdit(BaseEdit):
         with zipfile.ZipFile(zip_filename) as archive:
             entry = archive.infolist()[0]
             with archive.open(entry) as f:
-                    label_array = tifffile.imread(f)
+                    labels = tifffile.imread(f)
         
         # Put new label_array into Project
-        np.reshape(label_array, self.project.label_array.shape)
-        for frame in self.project.frames:
-            frame.frame = label_array[frame.frame_id, ...]
+        labels = np.reshape(labels, self.frame.shape)
+        self.frame[:] = labels
         # Delete files created by Kiosk job
         os.remove(zip_filename)
         os.remove(json_filename)
