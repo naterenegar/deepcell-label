@@ -717,10 +717,10 @@ class ZStackEdit(BaseEdit):
             with tifffile.TiffWriter(temp) as writer:
                 writer.save(self.raw_frame[..., self.project.channel])
             process = subprocess.run(['python', '-m', 'kiosk_client', temp.name,
-                                    '--host', host,
-                                    '--job-type',jobtype],
-                                    capture_output=True)
-        
+                                      '--host', host,
+                                      '--job-type', jobtype],
+                                     capture_output=True)
+
         # Extract output filename from Kiosk job log
         stdout = process.stdout.decode("utf-8")
         zip_regex = r'Saved output file: "(.*\.zip)" in \d+.\d+ s.'
@@ -732,7 +732,7 @@ class ZStackEdit(BaseEdit):
             entry = archive.infolist()[0]
             with archive.open(entry) as f:
                     labels = tifffile.imread(f)
-        
+
         # Put new label_array into Project
         labels = np.reshape(labels, self.frame.shape)
         self.frame[:] = labels
