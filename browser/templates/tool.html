@@ -17,8 +17,10 @@
 
       <div class="row">
         <div class="col s6">
-          <button id="kiosk" class="btn waves-effect waves-light indigo" onClick="action('kiosk_job')">
+          <button data-target="kiosk-modal" class="btn waves-effect waves-light indigo modal-trigger">
             Label<i class="material-icons right">bubble_chart</i>
+          </button>
+            
           </button>
         </div>
       </div>
@@ -79,6 +81,42 @@
     </div>
 
   </div>
+
+  <!-- Modal Structure -->
+  <div id="kiosk-modal" class="modal">
+    <div class="modal-content">
+      <h4>Label</h4>
+      <p>
+        Select from the jobtypes below and launch a job on deepcell.org.
+      </p>
+      <h6>Jobtype</h6>
+      <form action="#" id='kioskJobtype'>
+        <p>
+          <label>
+            <input name="jobytpe" type="radio" value='\"segmentation\"' checked />
+            <span>Segmentation</span>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input name="jobytpe" type="radio" value='\"multiplex\"' />
+            <span>Multiplex</span>
+          </label>
+        </p>
+        <p>
+          <label>
+            <input name="jobytpe" type="radio" value='\"tracking\"' />
+            <span>Tracking</span>
+          </label>
+        </p>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancel</a>
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat" 
+        onClick="kioskJob()">Launch Job</a>
+    </div>
+  </div>
 </main>
 {%- endblock -%}
 
@@ -93,6 +131,15 @@
 <!-- START DeepCell Label FUNCTION CALL -->
 <script>
   var settings = {{settings | tojson}};
+
+  function kioskJob() {
+    const actionName = 'kiosk_job';
+    let info = {
+      jobtype: document.querySelector('input[name="jobytpe"]:checked').value
+    };
+    action(actionName, info);
+  }
+
   function download() {
     let token = "{{settings['token']}}";
     window.location = `/downloadproject/${token}`;
