@@ -612,6 +612,7 @@ let outputBucket;
 
 var rendering_raw = false;
 var display_labels;
+var loading = false;
 
 var current_frame = 0;
 var current_highlight = true;

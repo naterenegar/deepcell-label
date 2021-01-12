@@ -162,12 +162,14 @@ class BackendAction extends Action {
   }
 
   do() {
+    const wheel = document.getElementById('loadingWheel');
+    wheel.style.display = 'inline';
     $.ajax({
       type: 'POST',
       url: `${document.location.origin}/api/edit/${project_id}/${this.action}`,
       data: this.info,
-      async: false
-    }).done(handlePayload);
+      async: true
+    }).done( () => wheel.style.display = 'none').done(handlePayload);
   }
 
   undo() {

@@ -75,9 +75,14 @@
         </button>
       </div>
       <!-- Canvas used to display image and capture user input -->
-      <canvas id="canvas" class="z-depth-2"></canvas>
+      <div style='position: relative;'>
+        <canvas id="canvas" class="z-depth-2"></canvas>
+        <img src="{{ url_for('static', filename='810.svg') }}" style="display:none; position:absolute; left:25%; top:25%; width:50%; z-index:2;" id="loadingWheel"/>
+      </div>
       <!-- Second canvas used for acutal image processing, hidden -->
       <canvas id="hidden_seg_canvas" class="hide"></canvas>
+      <!-- Loading icon to be drawn over canvas -->
+
     </div>
 
   </div>
@@ -93,19 +98,19 @@
       <form action="#" id='kioskJobtype'>
         <p>
           <label>
-            <input name="jobytpe" type="radio" value='\"segmentation\"' checked />
+            <input name="jobytpe" type="radio" value='"segmentation"' checked />
             <span>Segmentation</span>
           </label>
         </p>
         <p>
           <label>
-            <input name="jobytpe" type="radio" value='\"multiplex\"' />
+            <input name="jobytpe" type="radio" value='"multiplex"' />
             <span>Multiplex</span>
           </label>
         </p>
         <p>
           <label>
-            <input name="jobytpe" type="radio" value='\"tracking\"' />
+            <input name="jobytpe" type="radio" value='"tracking"' />
             <span>Tracking</span>
           </label>
         </p>
