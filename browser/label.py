@@ -9,6 +9,7 @@ import json
 import os
 import re
 import subprocess
+import shutil
 import sys
 import tarfile
 import tempfile
@@ -712,10 +713,17 @@ class ZStackEdit(BaseEdit):
         from the raw image
         """
         # import pdb; pdb.set_trace()
-        # Save raw image into a TIF and send to Kiosk
-        with tempfile.NamedTemporaryFile(suffix='.tif') as temp:
-            with tifffile.TiffWriter(temp) as writer:
-                writer.save(self.raw_frame[..., self.project.channel])
+        # Save zip of TIFF frames and send to Kiosk
+        with tempfile.NamedTemporaryFile(suffix='.zip') as temp:
+            zip_dir = tempfile.mkdtemp()
+            try:
+                with zipfile.ZipFile(temp, "w", compression=zipfile.ZIP_DEFLATED) as zfd:
+                    for frame in self.project.raw_frames:
+                        frame_path = os.path.join(zip_dir, f'frame_{frame.frame_id}.tif')
+                        Image.fromarray(frame.frame[..., self.channel]).save(frame_path)
+                        zfd.write(frame_path, f'frame_{frame.frame_id}.tif')
+            finally:
+                shutil.rmtree(zip_dir)
             process = subprocess.run(['python', '-m', 'kiosk_client', temp.name,
                                       '--host', host,
                                       '--job-type', jobtype],
@@ -727,15 +735,15 @@ class ZStackEdit(BaseEdit):
         json_regex = r'Wrote job data as JSON to (.*\.json).\n'
         zip_filename = re.search(zip_regex, stdout).group(1)
         json_filename = re.search(json_regex, stdout).group(1)
-        # Extract label image from output
+        # Extract label image from output and overwrite existing labels
         with zipfile.ZipFile(zip_filename) as archive:
             entry = archive.infolist()[0]
-            with archive.open(entry) as f:
+            for entry in archive.infolist():
+                with archive.open(entry) as f:
                     labels = tifffile.imread(f)
+                    frame_id = int(re.search(r'frame_(\d+)_\d+_feature_\d+.tif', entry.filename).group(1))
+                    self.project.label_frames[frame_id].frame[..., self.feature] = labels
 
-        # Put new label_array into Project
-        labels = np.reshape(labels, self.frame.shape)
-        self.frame[:] = labels
         # Delete files created by Kiosk job
         os.remove(zip_filename)
         os.remove(json_filename)
