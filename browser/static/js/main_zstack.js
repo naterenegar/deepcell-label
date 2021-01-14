@@ -969,8 +969,8 @@ function handleMousemove(evt) {
 
 // handles end of click&drag (different from click())
 function handleMouseup() {
-  if (loading) return;
   canvas.isPressed = false;
+  if (loading) return;
   if (!canvas.isSpacedown
       && mode.kind !== Modes.prompt
       && edit_mode) {
