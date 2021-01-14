@@ -162,6 +162,7 @@ class BackendAction extends Action {
   }
 
   do() {
+    loading = true;
     const wheel = document.getElementById('loadingWheel');
     wheel.style.display = 'inline';
     $.ajax({
@@ -169,7 +170,7 @@ class BackendAction extends Action {
       url: `${document.location.origin}/api/edit/${project_id}/${this.action}`,
       data: this.info,
       async: true
-    }).done( () => wheel.style.display = 'none').done(handlePayload);
+    }).done(handlePayload);
   }
 
   undo() {

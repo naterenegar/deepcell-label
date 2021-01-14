@@ -983,6 +983,10 @@ function handleMouseup() {
 }
 
 function handlePayload(payload) {
+  const wheel = document.getElementById('loadingWheel');
+  wheel.style.display = 'none';
+  loading = false;
+
   if (payload.error) {
     alert(payload.error);
   }
@@ -1135,13 +1139,14 @@ function handleFirstPayload(payload) {
   });
 
   window.addEventListener('keydown', (evt) => {
+    if (loading) return;
     mode.handle_key(evt);
   }, false);
 
   const canvasElement = document.getElementById('canvas');
   // bind click on canvas
   canvasElement.addEventListener('click', (evt) => {
-    if (!canvas.isSpacedown && (!edit_mode || mode.kind === Modes.prompt)) {
+    if (!loading && !canvas.isSpacedown && (!edit_mode || mode.kind === Modes.prompt)) {
       mode.click(evt);
     }
   });
