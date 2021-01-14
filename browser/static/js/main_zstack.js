@@ -901,6 +901,7 @@ function handleScroll(evt) {
 function handleMousedown(evt) {
   canvas.isPressed = true;
   // TODO: refactor "mousedown + mousemove" into ondrag?
+  if (loading) return;
   if (canvas.isSpacedown) return; // panning
   if (mode.kind === Modes.prompt) return; // turning on conv mode
   if (!edit_mode) return; // only draw in edit mode
@@ -968,6 +969,7 @@ function handleMousemove(evt) {
 
 // handles end of click&drag (different from click())
 function handleMouseup() {
+  if (loading) return;
   canvas.isPressed = false;
   if (!canvas.isSpacedown
       && mode.kind !== Modes.prompt
