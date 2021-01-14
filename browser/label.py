@@ -724,29 +724,31 @@ class ZStackEdit(BaseEdit):
                         zfd.write(frame_path, f'frame_{frame.frame_id}.tif')
             finally:
                 shutil.rmtree(zip_dir)
-            process = subprocess.run(['python', '-m', 'kiosk_client', temp.name,
-                                      '--host', host,
-                                      '--job-type', jobtype],
-                                     capture_output=True)
-
-        # Extract output filename from Kiosk job log
-        stdout = process.stdout.decode("utf-8")
-        zip_regex = r'Saved output file: "(.*\.zip)" in \d+.\d+ s.'
-        json_regex = r'Wrote job data as JSON to (.*\.json).\n'
-        zip_filename = re.search(zip_regex, stdout).group(1)
-        json_filename = re.search(json_regex, stdout).group(1)
-        # Extract label image from output and overwrite existing labels
-        with zipfile.ZipFile(zip_filename) as archive:
-            entry = archive.infolist()[0]
-            for entry in archive.infolist():
-                with archive.open(entry) as f:
-                    labels = tifffile.imread(f)
-                    frame_id = int(re.search(r'frame_(\d+)_\d+_feature_\d+.tif', entry.filename).group(1))
-                    self.project.label_frames[frame_id].frame[..., self.feature] = labels
-
-        # Delete files created by Kiosk job
-        os.remove(zip_filename)
-        os.remove(json_filename)
+            process = subprocess.Popen(['python', '-m', 'kiosk_client', temp.name,
+                                    '--host', host,
+                                    '--job-type', jobtype],
+                                    stdout=subprocess.PIPE)
+            # Continue job until zip with labels is available
+            log = ""
+            zip_regex = r'Saved output file: "(.*\.zip)" in \d+.\d+ s.'
+            while True:
+                stdout = process.stdout.read(1).decode("utf-8")
+                log += stdout
+                done = re.search(zip_regex, log)
+                if done is not None:
+                    process.terminate()
+                    zip_filename = done.group(1)
+                    # Extract label image from output and overwrite existing labels
+                    with zipfile.ZipFile(zip_filename) as archive:
+                        entry = archive.infolist()[0]
+                        with archive.open(entry) as f:
+                            labels = tifffile.imread(f)
+                        frame_id = int(re.search(r'frame_(\d+)_\d+_feature_\d+.tif', entry.filename).group(1))
+                        self.project.label_frames[frame_id].frame[..., self.feature] = labels
+                    os.remove(zip_filename)
+                    break
+                if stdout == '' and process.poll() != None:
+                    break
 
         # Remake cell_info dict based on new annotations
         self.y_changed = True
