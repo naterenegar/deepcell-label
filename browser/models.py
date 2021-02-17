@@ -82,7 +82,6 @@ class Project(db.Model):
 
     path = db.Column(db.Text, nullable=False)
     source = db.Column(db.Enum(SourceEnum), nullable=False)
-    tracking = db.Column(db.Boolean, nullable=False)
     height = db.Column(db.Integer, nullable=False)
     width = db.Column(db.Integer, nullable=False)
     num_frames = db.Column(db.Integer, nullable=False)
@@ -119,7 +118,6 @@ class Project(db.Model):
         # Record static project attributes
         self.path = str(loader.path)
         self.source = loader.source
-        self.tracking = is_trk(loader.path)
         self.num_frames = raw.shape[0]
         self.height = raw.shape[1]
         self.width = raw.shape[2]
@@ -145,6 +143,10 @@ class Project(db.Model):
 
         logger.debug('Initialized project from %s in %ss.',
                      self.path, timeit.default_timer() - init_start)
+
+    @property
+    def tracking(self):
+        return os.path.splitext(self.path.lower())[-1] in {'.trk', '.trks'}
 
     @property
     def label_array(self):
@@ -359,6 +361,7 @@ class Project(db.Model):
         payload['numChannels'] = self.num_channels
         payload['feature'] = self.feature
         payload['numFeatures'] = self.num_features
+        payload['tracking'] = self.tracking
 
         # First frame edited by each action
         # Excludes the first action, which loads the project
