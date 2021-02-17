@@ -21,6 +21,7 @@ export class Model {
     // Image processing booleans
     this._highlight = true;
     this._rgb = false;
+    this._tracking = project.tracking;
     // Selected labels
     this._foreground = 1; // label painted with
     this._background = 0; // label painted over
@@ -131,6 +132,15 @@ export class Model {
   set rgb(value) {
     this._rgb = value;
     this.adjuster.makeCascade();
+  }
+
+  get tracking() {
+    return this._tracking;
+  }
+
+  set tracking(value) {
+    this._tracking = value;
+    this.notifyInfoChange();
   }
 
   get tracks() {
