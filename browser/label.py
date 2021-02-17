@@ -771,29 +771,72 @@ class TrackEdit(BaseEdit):
 
         self.y_changed = self.labels_changed = True
 
-    def action_set_parent(self, label_1, label_2):
+    def action_divide(self, parent, daughters):
         """
-        label_1 gave birth to label_2
+        Creates a division in tracks where parent divides into daughters.
+
+        Args:
+            parent (int): label that divides into daughters
+            daughters (list of ints): labels that the parent divide into
+
+        Raises:
+            ValueError: when parent does not end immediately before all daughters start
         """
-        track_1 = self.labels.tracks[label_1]
-        track_2 = self.labels.tracks[label_2]
+        # Check when parents and daughters start
+        parent_track = self.labels.tracks[parent]
+        last_frame = max(parent_track['frames'])
+        first_frames = [self.labels.tracks[daughter]['frames'] for daughter in daughters]
+        first_frame = min(first_frames)
 
-        last_frame_parent = max(track_1['frames'])
-        first_frame_daughter = min(track_2['frames'])
+        # Check that division is valid
+        # parent ends before any daughters start
+        if last_frame > first_frame:
+            raise ValueError(f'parent {parent} ends in frame {last_frame} after'
+                             f'daughters start in frame {first_frame}')
+        # daughters start as soon as parent ends
+        if last_frame + 1 < first_frame:
+            raise ValueError(f'parent {parent} ends in frame {last_frame} before'
+                             f'daughters start in frame {first_frame}')
+        # daughters all start at the same time
+        if max(first_frames) != first_frame:
+            raise ValueError(
+                f'daughter {max(daughters, key=first_frames)}'
+                f'starts in frame {max(first_frames)} after'
+                f'daughter {min(daughters, key=first_frames)}'
+                f'starts in frame {first_frame}')
 
-        if last_frame_parent < first_frame_daughter:
-            track_1['daughters'].append(label_2)
-            daughters = np.unique(track_1['daughters']).tolist()
-            track_1['daughters'] = daughters
+        # Update tracks
+        parent_track['daughters'] = daughters
+        parent_track['frame_div'] = first_frame
+        for daughter in daughters:
+            track = self.labels.tracks[daughter]
+            track['parent'] = parent
 
-            track_2['parent'] = label_1
+        self.labels_changed = True
 
-            if track_1['frame_div'] is None:
-                track_1['frame_div'] = first_frame_daughter
-            else:
-                track_1['frame_div'] = min(track_1['frame_div'], first_frame_daughter)
+    # def action_set_parent(self, label_1, label_2):
+    #     """
+    #     label_1 gave birth to label_2
+    #     """
+    #     track_1 = self.labels.tracks[label_1]
+    #     track_2 = self.labels.tracks[label_2]
 
-            self.labels_changed = True
+    #     last_frame_parent = max(track_1['frames'])
+    #     first_frame_daughter = min(track_2['frames'])
+
+    #     if last_frame_parent < first_frame_daughter:
+    #         track_1['daughters'].append(label_2)
+    #         daughters = np.unique(track_1['daughters']).tolist()
+    #         track_1['daughters'] = daughters
+
+    #         track_2['parent'] = label_1
+
+    #         if track_1['frame_div'] is None:
+    #             track_1['frame_div'] = first_frame_daughter
+    #         else:
+    #             track_1['frame_div'] = min(track_1['frame_div'], first_frame_daughter)
+
+    #         self.labels_changed = True
 
     def action_replace(self, label_1, label_2):
         """
