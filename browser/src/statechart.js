@@ -148,6 +148,15 @@ const watershed = (context) => {
   addFencedAction(action);
 };
 
+const divide = (context) => {
+  const args = {
+    parent: context.parent,
+    daughters: context.daughters,
+  }
+  const action = new BackendAction('divide', args);
+  addFencedAction(action);
+}
+
 // tool states
 const paintState = {
   initial: 'idle',
@@ -272,6 +281,34 @@ const watershedState = {
   }
 };
 
+const divideState = {
+  entry: 'resetDivision',
+  initial: 'parent',
+  states: {
+    parent: {
+      on: {
+        click: {
+          cond: () => getCanvas().label !== 0,
+          target: 'daughters',
+          actions: 'storeParent'
+        }
+      }
+    },
+    daughters: {
+      on: {
+        click: {
+          cond: 'newDaughter',
+          actions: 'storeDaughter'
+        },
+        'keydown.Enter': {
+          cond: (context) => Object.keys(context.daughters).length >= 2,
+          actions: 'createDivision'
+        }
+      }
+    }
+  },
+};
+
 /**
  * Handles which current tool for mouse behavior.
  */
@@ -285,6 +322,7 @@ const toolbarState = {
     paint: paintState,
     threshold: thresholdState,
     watershed: watershedState,
+    divide: divideState,
     hist: { type: 'history' }
   },
   on: {
@@ -306,6 +344,10 @@ const toolbarState = {
       target: '.watershed',
       in: '#deepcellLabel.rgb.oneChannel'
     },
+    'keydown.p': {
+      target: '.divide',
+      // in: '#deepcellLabel.app.tracking'
+    }
   }
 };
 
@@ -522,6 +564,8 @@ export const deepcellLabelMachine = Machine(
       storedLabel: 0,
       storedX: 0,
       storedY: 0,
+      parent: null,
+      daughters: {},
     },
     invoke: [
       backendMachine,
@@ -548,6 +592,9 @@ export const deepcellLabelMachine = Machine(
         storedX: () => getCanvas().imgX,
         storedY: () => getCanvas().imgY,
       }),
+      resetDivision: assign({ parent: null, daughters: {} }),
+      storeParent: assign({ parent: () => getCanvas().label }),
+      storeDaughter: assign({ daughters: (context) => ({ ...context.daughters, [getCanvas().label]: 0 }) }),
       // select labels actions
       selectLabel: choose([
         { cond: 'shiftLeftMouse', actions: () => addAction(new SetForeground(getCanvas().label)) },
@@ -573,6 +620,7 @@ export const deepcellLabelMachine = Machine(
       replaceFrame: replaceFrame,
       replaceAll: replaceAll,
       watershed: watershed,
+      divide: divide,
       // change frame actions
       decrementFrame: () => addFencedAction(new ChangeFrame(getModel().frame - 1)),
       incrementFrame: () => addFencedAction(new ChangeFrame(getModel().frame + 1)),
@@ -610,6 +658,7 @@ export const deepcellLabelMachine = Machine(
         (getCanvas().imgX !== context.storedX || getCanvas().imgY !== context.storedY)
       ),
       nonemptyBox: (context) => context.storedX !== getCanvas().imgX && context.storedY !== getCanvas().imgY,
+      newDaughter: (context) => !(getCanvas().label in context.daughters) && getCanvas().label !== context.parent,
     }
   }
 );
