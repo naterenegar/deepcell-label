@@ -8,8 +8,7 @@
 
     <div id="table-col" class="col s5"> 
 
-      <h4 id="tool-title">ZStack Tool</h4>
-      <p>Filename will be given after submit button is pressed.</p>
+      <h4 id="tool-title">{% if settings['tracking'] %} Tracking {% else %} ZStack {% endif %} Tool</h4>
 
       <div class="row" id="submit-row" hidden=true>
         <div class="col s6">
@@ -31,7 +30,7 @@
 
       <div class="row">
         <div class="col s12">
-          {% include "partials/zstack_table.html" %}
+          {% include "partials/infotable.html" %}
         </div>
       </div>
 
