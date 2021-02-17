@@ -160,14 +160,6 @@ class BaseEdit(object):
         """
         return self.project.channel
 
-    @property
-    def scale_factor(self):
-        """
-        Returns:
-            float: current scale_factor
-        """
-        return self.project.scale_factor
-
     def dispatch_action(self, action, info):
         """
         Call an action method based on an action type.
@@ -267,7 +259,7 @@ class BaseEdit(object):
             y_loc = loc[0]
 
             brush_area = circle(y_loc, x_loc,
-                                brush_size // self.scale_factor,
+                                brush_size,
                                 (self.project.height, self.project.width))
 
             # do not overwrite or erase labels other than the one you're editing
@@ -306,8 +298,8 @@ class BaseEdit(object):
         """
         img_ann = self.frame[..., self.feature]
 
-        seed_point = (int(y_location // self.scale_factor),
-                      int(x_location // self.scale_factor))
+        seed_point = (int(y_location),
+                      int(x_location))
         contig_cell = flood(image=img_ann, seed_point=seed_point)
         stray_pixels = np.logical_and(np.invert(contig_cell), img_ann == label)
         img_trimmed = np.where(stray_pixels, 0, img_ann)
@@ -328,8 +320,8 @@ class BaseEdit(object):
         """
         img = self.frame[..., self.feature]
         # Rescale click location to corresponding location in label array
-        hole_fill_seed = (int(y_location // self.scale_factor),
-                          int(x_location // self.scale_factor))
+        hole_fill_seed = (int(y_location),
+                          int(x_location))
         # Check current label
         old_label = img[hole_fill_seed]
 
@@ -367,11 +359,11 @@ class BaseEdit(object):
         seeds_labeled = np.zeros(img_ann.shape)
 
         # create two seed locations
-        seeds_labeled[int(y1_location / self.scale_factor),
-                      int(x1_location / self.scale_factor)] = current_label
+        seeds_labeled[int(y1_location),
+                      int(x1_location)] = current_label
 
-        seeds_labeled[int(y2_location / self.scale_factor),
-                      int(x2_location / self.scale_factor)] = new_label
+        seeds_labeled[int(y2_location),
+                      int(x2_location)] = new_label
 
         # define the bounding box to apply the transform on and select
         # appropriate sections of 3 inputs (raw, seeds, annotation mask)

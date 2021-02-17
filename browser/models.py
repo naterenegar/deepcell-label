@@ -82,6 +82,7 @@ class Project(db.Model):
 
     path = db.Column(db.Text, nullable=False)
     source = db.Column(db.Enum(SourceEnum), nullable=False)
+    tracking = db.Column(db.Boolean, nullable=False)
     height = db.Column(db.Integer, nullable=False)
     width = db.Column(db.Integer, nullable=False)
     num_frames = db.Column(db.Integer, nullable=False)
@@ -91,7 +92,6 @@ class Project(db.Model):
     frame = db.Column(db.Integer, default=0)
     channel = db.Column(db.Integer, default=0)
     feature = db.Column(db.Integer, default=0)
-    scale_factor = db.Column(db.Float, default=1)
     colormap = db.Column(db.PickleType)
 
     raw_frames = db.relationship('RawFrame', backref='project')
@@ -119,18 +119,16 @@ class Project(db.Model):
         # Record static project attributes
         self.path = str(loader.path)
         self.source = loader.source
+        self.tracking = is_trk(loader.path)
         self.num_frames = raw.shape[0]
         self.height = raw.shape[1]
         self.width = raw.shape[2]
         self.num_channels = raw.shape[-1]
         self.num_features = label.shape[-1]
+
         cmap = plt.get_cmap('viridis')
         cmap.set_bad('black')
         self.colormap = cmap
-
-        if self.is_track:
-            # Track files require a different scale factor
-            self.scale_factor = 2
 
         # Create frames from raw, RGB, and labeled images
         self.raw_frames = [RawFrame(i, frame)
@@ -157,14 +155,6 @@ class Project(db.Model):
     def raw_array(self):
         """Compiles all raw frames into a single numpy array."""
         return np.array([frame.frame for frame in self.raw_frames])
-
-    @property
-    def is_zstack(self):
-        return os.path.splitext(self.path.lower())[-1] in {'.npz', '.png', '.tif', '.tiff'}
-
-    @property
-    def is_track(self):
-        return os.path.splitext(self.path.lower())[-1] in {'.trk', '.trks'}
 
     @staticmethod
     def get(token):
@@ -352,9 +342,9 @@ class Project(db.Model):
 
         img_payload = {}
         raw_png = self._get_raw_png()
-        img_payload['raw'] = f'data:image/png;base64,{encode(raw_png)}'
+        img_payload['raw'] = encode(raw_png)
         label_png = self._get_label_png()
-        img_payload['segmented'] = f'data:image/png;base64,{encode(label_png)}'
+        img_payload['segmented'] = encode(label_png)
         img_payload['seg_arr'] = self._get_label_arr()
         payload['imgs'] = img_payload
 
@@ -365,14 +355,10 @@ class Project(db.Model):
         payload['numFrames'] = self.num_frames
         payload['project_id'] = self.token
         payload['dimensions'] = (self.width, self.height)
-        # Attributes specific to filetype
-        if self.is_track:
-            payload['screen_scale'] = self.scale_factor
-        if self.is_zstack:
-            payload['channel'] = self.channel
-            payload['numChannels'] = self.num_channels
-            payload['feature'] = self.feature
-            payload['numFeatures'] = self.num_features
+        payload['channel'] = self.channel
+        payload['numChannels'] = self.num_channels
+        payload['feature'] = self.feature
+        payload['numFeatures'] = self.num_features
 
         # First frame edited by each action
         # Excludes the first action, which loads the project
@@ -399,10 +385,10 @@ class Project(db.Model):
             img_payload = {}
             if x:
                 raw_png = self._get_raw_png()
-                img_payload['raw'] = f'data:image/png;base64,{encode(raw_png)}'
+                img_payload['raw'] = encode(raw_png)
             if y:
                 label_png = self._get_label_png()
-                img_payload['segmented'] = f'data:image/png;base64,{encode(label_png)}'
+                img_payload['segmented'] = encode(label_png)
                 img_payload['seg_arr'] = self._get_label_arr()
         else:
             img_payload = False
@@ -778,4 +764,12 @@ def consecutive(data, stepsize=1):
 
 
 def encode(x):
-    return base64.encodebytes(x.read()).decode()
+    return f'data:image/png;base64,{base64.encodebytes(x.read()).decode()}'
+
+
+def is_zstack(filename):
+    return os.path.splitext(filename.lower())[-1] in {'.npz', '.png', '.tif', '.tiff'}
+
+
+def is_trk(filename):
+    return os.path.splitext(filename.lower())[-1] in {'.trk', '.trks'}
