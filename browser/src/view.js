@@ -118,6 +118,8 @@ class InfopaneView {
    * Updates the infopane with the latest project info.
    */
   render() {
+    document.getElementById('tool-title').textContent = this.model.tracking ? 'Tracking Tool' : 'ZStack Tool';
+
     document.getElementById('frame').textContent = this.model.frame;
     document.getElementById('feature').textContent = this.model.feature;
     document.getElementById('channel').textContent = this.model.channel;
@@ -137,15 +139,17 @@ class InfopaneView {
     document.getElementById('highlight').textContent = highlightText;
     document.getElementById('edit_brush').textContent = this.model.size;
     this.renderLabelRows();
-    // always show tool and selected labels
 
+    document.getElementById('tracking-rows').hidden = !this.model.tracking;
+    this.renderTrackingRows();
+
+    // always show tool and selected labels
     document.getElementById('mode').textContent = this.getTool();
     const foreground = this.model.foreground;
     const background = this.model.background;
     document.getElementById('foreground').textContent = foreground === 0 ? 'background' : foreground;
     document.getElementById('background').textContent = background === 0 ? 'background' : background;
-
-    this.renderPrompt();
+    document.getElementById('prompt').textContent = this.getPrompt();
   }
 
   getTool() {
@@ -171,11 +175,38 @@ class InfopaneView {
     }
   }
 
-  renderPrompt() {
+  renderTrackingRows() {
+    if (this.canvas.label !== 0) {
+      const track = this.model.tracks[this.model.feature][this.canvas.label.toString()];
+      document.getElementById('parent').textContent = track.parent || 'None';
+      document.getElementById('daughters').textContent = '[' + track.daughters.toString() + ']';
+      document.getElementById('frame_div').textContent = track.frame_div || 'None';
+      const capped = track.capped.toString();
+      document.getElementById('capped').textContent = capped[0].toUpperCase() + capped.substring(1);
+    } else {
+      document.getElementById('parent').textContent = '';
+      document.getElementById('daughters').textContent = '';
+      document.getElementById('frame_div').textContent = '';
+      document.getElementById('capped').textContent = '';
+    }
+  }
+
+  getPrompt() {
     const state = window.controller.service.state;
     const label = this.model.foreground;
     const secondLabel = this.model.background;
     const frame = this.model.frame;
+
+    if (state.matches('mouse.toolbar.divide.parent')) {
+      return 'Click on the parent label of the division.';
+    }
+
+    if (state.matches('mouse.toolbar.divide.daughters')) {
+      const parent = state.context.parent;
+      const daughters = Object.keys(state.context.daughters).join(', ');
+      return `Press ENTER to confirm label ${parent} divides into ${daughters} or ESCAPE to cancel.`;
+    }
+
     let prompt;
     if (state.matches('confirm.predictFrame')) {
       prompt = `Predict labels on frame ${frame}?`;
@@ -190,11 +221,9 @@ class InfopaneView {
     }
 
     if (prompt) {
-      prompt = prompt + '\nPress ENTER to confirm or ESC to cancel.'
-      document.getElementById('prompt').textContent = prompt;
-    } else {
-      document.getElementById('prompt').textContent = '';
+      return prompt + '\nPress ENTER to confirm or ESC to cancel.'
     }
+    return '';
   }
 }
 
