@@ -1,4 +1,5 @@
 import { interpret } from 'xstate';
+import { inspect } from '@xstate/inspect';
 
 import { deepcellLabelMachine } from './statechart';
 import { Model } from './model';
@@ -21,7 +22,7 @@ export class Controller {
       this.history = new History();
 
       // Interpret the statechart
-      this.service = interpret(deepcellLabelMachine);
+      this.service = interpret(deepcellLabelMachine, { devTools: true });
       // add a listener to update the info table whenever a transition occurs
       this.service.onTransition(() => { this.model.notifyInfoChange() });
       // Start the service
