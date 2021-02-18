@@ -785,10 +785,12 @@ class TrackEdit(BaseEdit):
         # Check when parents and daughters start
         parent_track = self.labels.tracks[parent]
         last_frame = max(parent_track['frames'])
-        first_frames = [self.labels.tracks[daughter]['frames'] for daughter in daughters]
+        first_frames = [min(self.labels.tracks[daughter]['frames']) for daughter in daughters]
         first_frame = min(first_frames)
 
         # Check that division is valid
+        if parent in daughters:
+            raise ValueError(f'parent {parent} appears among daughters')
         # parent ends before any daughters start
         if last_frame > first_frame:
             raise ValueError(f'parent {parent} ends in frame {last_frame} after'
@@ -808,6 +810,7 @@ class TrackEdit(BaseEdit):
         # Update tracks
         parent_track['daughters'] = daughters
         parent_track['frame_div'] = first_frame
+        parent_track['capped'] = True
         for daughter in daughters:
             track = self.labels.tracks[daughter]
             track['parent'] = parent
