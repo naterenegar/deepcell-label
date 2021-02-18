@@ -150,9 +150,10 @@ const watershed = (context) => {
 
 const divide = (context) => {
   const args = {
-    parent: context.parent,
-    daughters: context.daughters,
+    parent: getModel().foreground,
+    daughters: JSON.stringify(Object.keys(context.daughters).map(Number)),
   }
+  console.log(args);
   const action = new BackendAction('divide', args);
   addFencedAction(action);
 }
@@ -282,28 +283,34 @@ const watershedState = {
 };
 
 const divideState = {
-  entry: 'resetDivision',
-  initial: 'parent',
+  entry: 'resetDaughters',
+  initial: 'noDaughters',
   states: {
-    parent: {
+    noDaughters: {
       on: {
         click: {
-          cond: () => getCanvas().label !== 0,
-          target: 'daughters',
-          actions: 'storeParent'
+          cond: 'validDaughter',
+          target: 'oneDaughter',
+          actions: 'storeDaughter',
         }
       }
     },
-    daughters: {
+    oneDaughter: {
       on: {
         click: {
-          cond: 'newDaughter',
-          actions: 'storeDaughter'
+          cond: 'validDaughter',
+          target: 'twoPlusDaughters',
+          actions: 'storeDaughter',
         },
-        'keydown.Enter': {
-          cond: (context) => Object.keys(context.daughters).length >= 2,
-          actions: 'createDivision'
-        }
+      }
+    },
+    twoPlusDaughters: {
+      on: {
+        click: {
+          cond: 'validDaughter',
+          actions: 'storeDaughter',
+        },
+        'keydown.Enter': { actions: 'divide' }
       }
     }
   },
@@ -592,8 +599,7 @@ export const deepcellLabelMachine = Machine(
         storedX: () => getCanvas().imgX,
         storedY: () => getCanvas().imgY,
       }),
-      resetDivision: assign({ parent: null, daughters: {} }),
-      storeParent: assign({ parent: () => getCanvas().label }),
+      resetDaughters: assign({ daughters: {} }),
       storeDaughter: assign({ daughters: (context) => ({ ...context.daughters, [getCanvas().label]: 0 }) }),
       // select labels actions
       selectLabel: choose([
@@ -658,7 +664,10 @@ export const deepcellLabelMachine = Machine(
         (getCanvas().imgX !== context.storedX || getCanvas().imgY !== context.storedY)
       ),
       nonemptyBox: (context) => context.storedX !== getCanvas().imgX && context.storedY !== getCanvas().imgY,
-      newDaughter: (context) => !(getCanvas().label in context.daughters) && getCanvas().label !== context.parent,
+      validDaughter: (context) => {
+        const label = getCanvas().label;
+        return label !== 0 && label !== getModel().foreground && !(label in context.daughters)
+      }
     }
   }
 );
