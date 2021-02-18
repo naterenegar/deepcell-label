@@ -197,14 +197,17 @@ class InfopaneView {
     const secondLabel = this.model.background;
     const frame = this.model.frame;
 
-    if (state.matches('mouse.toolbar.divide.parent')) {
-      return 'Click on the parent label of the division.';
+    if (state.matches('mouse.toolbar.divide.noDaughters')) {
+      return `Click on a daughter of label ${label}.`;
     }
 
-    if (state.matches('mouse.toolbar.divide.daughters')) {
-      const parent = state.context.parent;
+    if (state.matches('mouse.toolbar.divide.oneDaughter')) {
+      return `Click on a second daughter of label ${label}.`;
+    }
+
+    if (state.matches('mouse.toolbar.divide.twoPlusDaughters')) {
       const daughters = Object.keys(state.context.daughters).join(', ');
-      return `Press ENTER to confirm label ${parent} divides into ${daughters} or ESCAPE to cancel.`;
+      return `Press ENTER to confirm label ${label} divides into labels ${daughters}. Press ESCAPE to cancel.`;
     }
 
     let prompt;
