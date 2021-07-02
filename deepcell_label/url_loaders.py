@@ -33,11 +33,14 @@ class Loader():
     Interface for loading files into DeepCell Label.
     """
 
-    def __init__(self, url_form):
-        self.url = url_form['url']
-        self.labeled_url = url_form['labeled_url'] if 'labeled_url' in url_form else None
-        self.input_axes = url_form['axes'] if 'axes' in url_form else DCL_AXES
-        self.output_axes = DCL_AXES
+    def __init__(self, form):
+        self.url = form['url']
+        self.raw_axes = form['axes'] if 'axes' in form else DCL_AXES
+
+        self.labeled_url = form['labeled_url'] if 'labeled_url' in form else None
+        self.labeled_axes = form['labeled_axes'] if 'labeled_axes' in form else self.raw_axes
+        
+        self.axes = DCL_AXES
 
         if self.labeled_url is None:
             self.load()
@@ -58,8 +61,7 @@ class Loader():
         url = self.url
         r = requests.get(url)
         data = r.content
-        # if r.status_code !== 200:
-        #     raise ValueError(r.status_code)
+        label_array = None
         if is_npz(url):
             raw_array = load_raw_npz(data)
             label_array = load_labeled_npz(data)
@@ -80,11 +82,13 @@ class Loader():
             ext = pathlib.Path(url).suffix
             raise InvalidExtension('invalid file extension: {}'.format(ext))
 
+        self.raw_array = reshape(raw_array, self.raw_axes, self.axes)
         if label_array is None:
-            label_array = np.zeros(raw_array.shape)
-
-        self.raw_array = reshape(raw_array, self.input_axes, self.output_axes)
-        self.label_array = reshape(label_array, self.input_axes, self.output_axes)
+            # replace channels dimension with one feature
+            shape = (*self.raw_array.shape[:-1], 1)
+            self.label_array = np.zeros(shape)
+        else:
+            self.label_array = reshape(label_array, self.labeled_axes, self.axes)
 
     def load_raw(self):
         url = self.url
@@ -105,7 +109,7 @@ class Loader():
         else:
             ext = pathlib.Path(url).suffix
             raise InvalidExtension('invalid file extension: {}'.format(ext))
-        self.raw_array = reshape(raw_array, self.input_axes, self.output_axes)
+        self.raw_array = reshape(raw_array, self.raw_axes, self.axes)
 
     def load_labeled(self):
         url = self.labeled_url
@@ -127,7 +131,7 @@ class Loader():
         else:
             ext = pathlib.Path(url).suffix
             raise InvalidExtension('invalid file extension: {}'.format(ext))
-        self.label_array = reshape(label_array, 'CZYX', self.output_axes)
+        self.label_array = reshape(label_array, self.labeled_axes, self.axes)
 
 
 def is_npz(url):
