@@ -6,6 +6,7 @@ import { pure } from 'xstate/lib/actions';
 import createApiMachine from './apiMachine';
 import canvasMachine from './canvasMachine';
 import createImageMachine from './imageMachine';
+import createCellTypesMachine from './labeled/cellTypesMachine';
 import toolMachine from './toolMachine';
 import undoMachine from './undoMachine';
 
@@ -67,6 +68,8 @@ const createDeepcellLabelMachine = (projectId, bucket) =>
           imageRef: context => spawn(createImageMachine(context), 'image'),
           toolRef: () => spawn(toolMachine, 'tool'),
           apiRef: context => spawn(createApiMachine(context), 'api'),
+          cellTypesRef: context =>
+            spawn(createCellTypesMachine(context), 'cellTypes'),
         }),
         sendActorRefs: pure(({ toolRef }) => {
           return [
