@@ -119,6 +119,12 @@ export function useTool() {
   return tool;
 }
 
+export function useCellTypes() {
+  const deepCellLabel = useDeepCellLabel();
+  const { cellTypes } = deepCellLabel.state.children;
+  return cellTypes;
+}
+
 const ServiceContext = props => {
   return (
     <LabelContext.Provider value={service}>

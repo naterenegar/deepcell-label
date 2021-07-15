@@ -4,6 +4,7 @@ import { ResizeSensor } from 'css-element-queries';
 import debounce from 'lodash.debounce';
 import { useEffect, useRef, useState } from 'react';
 import Canvas from './Canvas/Canvas';
+import CellTypes from './Controls/CellTypes/CellTypes';
 import ImageControls from './Controls/ImageControls/ImageControls';
 import ActionButtons from './Controls/Toolbar/ActionButtons';
 import SelectedPalette from './Controls/Toolbar/SelectedPalette';
@@ -38,6 +39,9 @@ const useStyles = makeStyles(theme => ({
   toolbarBox: {
     flex: '0 0 auto',
     padding: theme.spacing(1),
+  },
+  cellTypesBox: {
+    flex: '0 0 auto',
   },
   canvasBox: {
     position: 'relative',
@@ -93,6 +97,9 @@ function Label() {
           <ToolControls />
           <ActionButtons />
           {labeled && <SelectedPalette />}
+        </Box>
+        <Box className={styles.cellTypesBox}>
+          <CellTypes />
         </Box>
         <Box ref={canvasBoxRef} className={styles.canvasBox}>
           <Canvas />
