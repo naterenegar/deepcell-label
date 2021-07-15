@@ -110,7 +110,7 @@ const createCellTypesMachine = (projectId, feature) =>
             src: fetchCellTypes,
             onDone: {
               target: 'idle',
-              actions: [(c, e) => console.log(e), 'saveCellTypes'],
+              actions: 'saveCellTypes',
             },
           },
         },
