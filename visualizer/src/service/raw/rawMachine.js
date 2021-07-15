@@ -60,7 +60,10 @@ const channelState = {
 
 const colorState = {
   entry: [sendParent('COLOR'), assign({ colorMode: ({ color }) => color })],
-  on: { TOGGLE_COLOR_MODE: 'grayscale' },
+  on: {
+    TOGGLE_COLOR_MODE: 'grayscale',
+    SET_LAYERS: { actions: 'forwardToColorMode' },
+  },
 };
 
 const grayscaleState = {
@@ -72,6 +75,7 @@ const grayscaleState = {
   on: {
     TOGGLE_COLOR_MODE: 'color',
     RESET: { actions: 'forwardToChannel' },
+    SET_LAYERS: { target: 'color', actions: forwardTo(({ color }) => color) },
   },
   initial: 'idle',
   states: {

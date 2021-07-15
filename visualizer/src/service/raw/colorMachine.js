@@ -1,12 +1,4 @@
-import {
-  actions,
-  assign,
-  forwardTo,
-  Machine,
-  send,
-  sendParent,
-  spawn,
-} from 'xstate';
+import { actions, assign, Machine, send, sendParent, spawn } from 'xstate';
 import createLayerMachine from './layerMachine';
 
 const { pure } = actions;
@@ -15,7 +7,9 @@ const frameState = {
   entry: 'loadFrame',
   initial: 'loading', // idle?
   states: {
-    idle: {},
+    idle: {
+      entry: 'useFrameInChannels',
+    },
     loading: {
       on: {
         CHANNEL_LOADED: {
@@ -38,7 +32,7 @@ const frameState = {
       on: {
         FRAME: {
           target: 'idle',
-          actions: ['setFrame', 'forwardToLoadedChannels'],
+          actions: 'setFrame',
         },
         CHANNEL: { target: 'loading', actions: 'addChannelToLoading' },
       },
@@ -50,6 +44,35 @@ const frameState = {
       cond: 'diffLoadingFrame',
       actions: ['setLoadingFrame', 'loadFrame'],
     },
+  },
+};
+
+const layersState = {
+  initial: 'idle',
+  states: {
+    idle: {},
+    loading: {
+      on: {
+        CHANNEL_LOADED: {
+          target: 'checkLoaded',
+          cond: 'isLoadingFrame',
+          actions: 'updateLoaded',
+        },
+      },
+    },
+    checkLoaded: {
+      always: [
+        {
+          cond: 'loaded',
+          target: 'idle',
+          actions: 'useFrameInChannels',
+        },
+        { target: 'loading' },
+      ],
+    },
+  },
+  on: {
+    SET_LAYERS: { actions: ['setLayers', 'loadFrame'], target: '.loading' },
   },
 };
 
@@ -97,6 +120,7 @@ const createColorMachine = ({ channels }) =>
       states: {
         frame: frameState,
         channel: channelState,
+        layers: layersState,
       },
       on: {
         ADD_LAYER: { actions: 'addLayer' },
@@ -195,9 +219,9 @@ const createColorMachine = ({ channels }) =>
             ];
           }
         ),
-        forwardToLoadedChannels: pure(({ channels, loadedChannels }) =>
+        useFrameInChannels: pure(({ frame, loadedChannels, channels }) =>
           [...loadedChannels.keys()].map(channel =>
-            forwardTo(channels[channel])
+            send({ type: 'FRAME', frame }, { to: channels[channel] })
           )
         ),
         addLayer: assign({
@@ -210,6 +234,17 @@ const createColorMachine = ({ channels }) =>
           layers: ({ layers }, { layer }) => [
             ...layers.filter(val => val !== layer),
           ],
+        }),
+        setLayers: assign({
+          layers: (_, { channels }) =>
+            channels.map((channel, index) =>
+              spawn(createLayerMachine(index, channel), `layer ${index}`)
+            ),
+          loadedChannels: (_, { channels }) =>
+            channels.reduce(
+              (map, channel) => map.set(channel, false),
+              new Map()
+            ),
         }),
       },
     }
