@@ -11,15 +11,18 @@ interface CellType {
 }
 
 interface CellTypeButtonProps {
+  id: string;
   cellType: CellType;
 }
 
-function CellTypeButton({ cellType }: CellTypeButtonProps) {
+function CellTypeButton({ id, cellType }: CellTypeButtonProps) {
   const { name, channels } = cellType;
 
   const raw = useRaw();
+  const cellTypes = useCellTypes();
 
   const onClick = () => {
+    cellTypes.send({ type: 'SET_CELL_TYPE', cellType: id });
     if (channels) {
       raw.send({ type: 'SET_LAYERS', channels });
     }
@@ -38,8 +41,8 @@ function CellTypes() {
 
   return (
     <ButtonGroup orientation='vertical'>
-      {Object.entries(cellTypes).map(([id, cellType]: any[]) => (
-        <CellTypeButton key={id} cellType={cellType} />
+      {Object.entries(cellTypes).map(([id, cellType]: [string, any]) => (
+        <CellTypeButton key={id} id={id} cellType={cellType} />
       ))}
     </ButtonGroup>
   );
