@@ -1,5 +1,28 @@
 /** Helper functions to manipulate ImageData. */
 
+/** Highlight cell type */
+export function highlightCellType(
+  imageData,
+  labeledArray,
+  cellType,
+  instanceLabels,
+  color
+) {
+  const [r, g, b, a] = color;
+  const { data, width, height } = imageData;
+  for (let j = 0; j < height; j += 1) {
+    for (let i = 0; i < width; i += 1) {
+      const instance = Math.abs(labeledArray[j][i]);
+      if (instanceLabels[instance] === Number(cellType)) {
+        data[(j * width + i) * 4 + 0] = r;
+        data[(j * width + i) * 4 + 1] = g;
+        data[(j * width + i) * 4 + 2] = b;
+        data[(j * width + i) * 4 + 3] = a;
+      }
+    }
+  }
+}
+
 /**
  * Highlights a label with color.
  * @param {ImageData} imageData where we draw the highlight

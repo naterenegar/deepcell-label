@@ -2,11 +2,13 @@ import { useSelector } from '@xstate/react';
 import React, { useEffect, useRef } from 'react';
 import {
   useCanvas,
+  useCellTypes,
   useFeature,
   useLabeled,
   useToolbar,
 } from '../../ServiceContext';
 import {
+  highlightCellType,
   highlightImageData,
   outlineAll,
   outlineSelected,
@@ -38,6 +40,13 @@ const OutlineCanvas = ({ className }) => {
   const invert = useSelector(labeled, state => state.context.invert);
   const opacity = useSelector(labeled, state => state.context.opacity);
 
+  const cellTypes = useCellTypes();
+  const cellType = useSelector(cellTypes, state => state.context.cellType);
+  const instanceLabels = useSelector(
+    cellTypes,
+    state => state.context.instanceLabels
+  );
+
   const feature = useFeature(featureIndex);
   let labeledArray = useSelector(feature, state => state.context.labeledArray);
   if (!labeledArray) {
@@ -67,12 +76,13 @@ const OutlineCanvas = ({ className }) => {
     const bColor = red;
     const hColor = [255, 255, 255, 128];
     highlightImageData(data, labeledArray, foreground, hColor);
+    highlightCellType(data, labeledArray, cellType, instanceLabels, hColor);
     if (outline) {
       outlineAll(data, labeledArray, fColor);
     }
     outlineSelected(data, labeledArray, foreground, background, fColor, bColor);
     hiddenCtx.current.putImageData(data, 0, 0);
-  }, [labeledArray, foreground, background, outline, invert, sw, sh]);
+  }, [labeledArray, cellType, foreground, background, outline, invert, sw, sh]);
 
   useEffect(() => {
     ctx.current.save();
@@ -91,6 +101,7 @@ const OutlineCanvas = ({ className }) => {
     ctx.current.restore();
   }, [
     labeledArray,
+    cellType,
     foreground,
     background,
     outline,
