@@ -74,8 +74,9 @@ class Loader():
             raw_array = load_tiff(data)
             label_array = np.zeros(raw_array.shape)
         elif is_zip(url):
-            raw_array = load_zip(data)
-            label_array = np.zeros(raw_array.shape)
+            raw_array = load_raw_zip(data)
+            label_array = load_labeled_zip(data)
+            additional_info = load_info_zip(data)
         else:
             ext = pathlib.Path(url).suffix
             raise InvalidExtension('invalid file extension: {}'.format(ext))
@@ -101,7 +102,7 @@ class Loader():
         elif is_tiff(url):
             raw_array = load_tiff(data)
         elif is_zip(url):
-            raw_array = load_zip(data)
+            raw_array = load_raw_zip(data)
         else:
             ext = pathlib.Path(url).suffix
             raise InvalidExtension('invalid file extension: {}'.format(ext))
@@ -123,7 +124,7 @@ class Loader():
         elif is_tiff(url):
             label_array = load_tiff(data)
         elif is_zip(url):
-            label_array = load_zip(data)
+            label_array = load_labeled_zip(data, load_tiffs=True)
         else:
             ext = pathlib.Path(url).suffix
             raise InvalidExtension('invalid file extension: {}'.format(ext))
@@ -252,18 +253,70 @@ def load_tiff(data):
     return TiffFile(io.BytesIO(data)).asarray()
 
 
-def load_zip(data):
+def open_zip(data):
+    return zipfile.ZipFile(io.BytesIO(data), 'r')
+
+
+def load_raw_zip(data):
+    zip_file = open_zip(data)
+    fnames = zip_file.namelist()
+
+    if 'X.npy' in fnames:
+        X = load_npy_from_zip(zip_file, 'X.npy')
+    else:
+        X = load_zipped_tiffs(zip_file)
+
+    return X
+
+
+def load_labeled_zip(data, load_tiffs=False):
+    zip_file = open_zip(data)
+    fnames = zip_file.namelist()
+
+    if 'y.npy' in fnames:
+        y = load_npy_from_zip(zip_file, 'y.npy')
+    elif load_tiffs:
+        y = load_zipped_tiffs(zip_file)
+    else:
+        y = None
+
+    return y
+
+
+def load_info_zip(data):
+    zip_file = open_zip(data)
+    fnames = zip_file.namelist()
+
+    info = {}
+    if 'channels.json' in fnames:
+        channels = json.loads(zip_file.read('channels.json'))
+        info['channels'] = channels
+
+    if 'classes/cell_type.json' in fnames:
+        cell_types = json.loads(zip_file.read('classes/cell_type.json'))
+        info['cell_types'] = cell_types
+
+    return info
+
+
+def load_zipped_tiffs(container):
     """
     Loads a series of image arrays from a zip of TIFFs.
     Treats separate TIFFs as channels.
     """
-    zip_file = zipfile.ZipFile(io.BytesIO(data), 'r')
     channels = [
-        load_tiff(zip_file.open(item).read())
-        for item in zip_file.filelist
+        load_tiff(container.open(item).read())
+        for item in container.infolist()
         if not str(item.filename).startswith('__MACOSX/') and is_tiff(str(item.filename))
     ]
     return np.array(channels)
+
+
+def load_npy_from_zip(container, arcname):
+    with io.BytesIO() as array_file:
+        array_file.write(container.read(arcname))
+        array_file.seek(0)
+        return np.load(array_file)
 
 
 class InvalidExtension(Exception):
