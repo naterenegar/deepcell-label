@@ -6,10 +6,6 @@ import { useEffect, useRef, useState } from 'react';
 import Canvas from './Canvas/Canvas';
 import CellTypes from './Controls/CellTypes/CellTypes';
 import ImageControls from './Controls/ImageControls/ImageControls';
-import ActionButtons from './Controls/Toolbar/ActionButtons';
-import SelectedPalette from './Controls/Toolbar/SelectedPalette';
-import ToolControls from './Controls/Toolbar/ToolControls';
-import UndoRedo from './Controls/Toolbar/UndoRedo';
 import Footer from './Footer/Footer';
 import Instructions from './Instructions/Instructions';
 import Navbar from './Navbar';
@@ -92,12 +88,12 @@ function Label() {
         <Box className={styles.controlPanelBox}>
           <ImageControls />
         </Box>
-        <Box className={styles.toolbarBox}>
+        {/* <Box className={styles.toolbarBox}>
           <UndoRedo />
           <ToolControls />
           <ActionButtons />
           {labeled && <SelectedPalette />}
-        </Box>
+        </Box> */}
         <Box className={styles.cellTypesBox}>
           <CellTypes />
         </Box>
