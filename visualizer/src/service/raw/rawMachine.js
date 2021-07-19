@@ -189,14 +189,12 @@ const createRawMachine = (projectId, numChannels, numFrames) =>
         /** Create a channel actor for each channel */
         spawnChannels: assign({
           channels: ({ projectId, numChannels, numFrames }) => {
-            return Array(numChannels)
-              .fill(0)
-              .map((val, index) =>
-                spawn(
-                  createChannelMachine(projectId, index, numFrames),
-                  `channel${index}`
-                )
-              );
+            return [...Array(numChannels).keys()].map(i =>
+              spawn(
+                createChannelMachine(projectId, i, numFrames),
+                `channel${i}`
+              )
+            );
           },
           channelNames: ({ numChannels }) =>
             [...Array(numChannels).keys()].map(i => `channel ${i}`),
