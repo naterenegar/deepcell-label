@@ -5,15 +5,15 @@ export function highlightCellType(
   imageData,
   labeledArray,
   cellType,
-  instanceLabels,
+  cellTypeLabels,
   color
 ) {
   const [r, g, b, a] = color;
   const { data, width, height } = imageData;
   for (let j = 0; j < height; j += 1) {
     for (let i = 0; i < width; i += 1) {
-      const instance = Math.abs(labeledArray[j][i]);
-      if (instanceLabels[instance] === Number(cellType)) {
+      const cell = Math.abs(labeledArray[j][i]);
+      if (cellTypeLabels[cell] === Number(cellType)) {
         data[(j * width + i) * 4 + 0] = r;
         data[(j * width + i) * 4 + 1] = g;
         data[(j * width + i) * 4 + 2] = b;

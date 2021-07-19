@@ -1,8 +1,15 @@
 import { assign, Machine } from 'xstate';
-import exampleData from './exampleData';
 
 function fetchCellTypes(context) {
-  return Promise.resolve(exampleData);
+  const { projectId, feature } = context;
+  const location = `/api/cell-types`;
+  return fetch(location).then(response => response.json());
+}
+
+function fetchCellTypeLabels(context) {
+  const { projectId, feature } = context;
+  const location = `/api/cell-type-labels/${projectId}/${feature}`;
+  return fetch(location).then(response => response.json());
 }
 
 const createCellTypesMachine = (projectId, feature) =>
@@ -14,23 +21,39 @@ const createCellTypesMachine = (projectId, feature) =>
         feature,
         cellTypes: {},
         cellTypeLabels: {},
-        instanceLabels: {},
         cellType: null,
       },
       initial: 'loading',
       states: {
         loading: {
-          invoke: {
-            src: fetchCellTypes,
-            onDone: {
-              target: 'idle',
-              actions: [
-                'saveCellTypes',
-                'saveCellTypeLabels',
-                'saveInstanceLabels',
-              ],
+          type: 'parallel',
+          states: {
+            cellTypes: {
+              initial: 'loading',
+              states: {
+                loading: {
+                  invoke: {
+                    src: fetchCellTypes,
+                    onDone: { actions: 'saveCellTypes' },
+                  },
+                },
+                loaded: { type: 'final' },
+              },
+            },
+            cellTypeLabels: {
+              initial: 'loading',
+              states: {
+                loading: {
+                  invoke: {
+                    src: fetchCellTypeLabels,
+                    onDone: { actions: 'saveCellTypeLabels' },
+                  },
+                },
+                loaded: { type: 'final' },
+              },
             },
           },
+          onDone: 'idle',
         },
         idle: {
           on: {
@@ -49,9 +72,6 @@ const createCellTypesMachine = (projectId, feature) =>
         saveCellTypes: assign({ cellTypes: (_, { data }) => data.cellTypes }),
         saveCellTypeLabels: assign({
           cellTypeLabels: (_, { data }) => data.cellTypeLabels,
-        }),
-        saveInstanceLabels: assign({
-          instanceLabels: (_, { data }) => data.instanceLabels,
         }),
       },
     }
