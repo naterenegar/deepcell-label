@@ -38,6 +38,12 @@ class Loader():
         self.input_axes = url_form['axes'] if 'axes' in url_form else DCL_AXES
         self.output_axes = DCL_AXES
 
+        self._cell_ids = None
+        self._cell_info = None
+        self._channels = None
+        self._cell_type_presets = None
+        self._cell_type_assignments = None
+
         if self.labeled_url is None:
             self.load()
         else:
@@ -49,12 +55,6 @@ class Loader():
         self.width = self.raw_array.shape[2]
         self.num_channels = self.raw_array.shape[-1]
         self.num_features = self.label_array.shape[-1]
-
-        self._cell_ids = None
-        self._cell_info = None
-        self._channels = None
-        self._cell_type_presets = None
-        self._cell_type_assignments = None
 
     @property
     def cell_ids(self):
