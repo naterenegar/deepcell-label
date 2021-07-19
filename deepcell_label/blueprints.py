@@ -103,6 +103,30 @@ def semantic_instance_labels(project_id, feature):
     return project.labels.cell_info[feature]
 
 
+@bp.route('/api/channels/<project_id>')
+def channels(project_id):
+    project = Project.get(project_id)
+    if not project:
+        return jsonify({'error': f'project {project_id} not found'}), 404
+    return project.labels.channels
+
+
+@bp.route('/api/cell-types/<project_id>/<int:feature>')
+def cell_types(project_id, feature):
+    project = Project.get(project_id)
+    if not project:
+        return jsonify({'error': f'project {project_id} not found'}), 404
+    return project.labels.cell_type_presets[feature]
+
+
+@bp.route('/api/cell-type-assignments/<project_id>/<int:feature>')
+def cell_type_assignments(project_id, feature):
+    project = Project.get(project_id)
+    if not project:
+        return jsonify({'error': f'project {project_id} not found'}), 404
+    return project.labels.cell_type_assignments[feature]
+
+
 @bp.route('/api/colormap/<project_id>/<int:feature>')
 def colormap(project_id, feature):
     project = Project.get(project_id)
