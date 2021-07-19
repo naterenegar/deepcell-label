@@ -20,8 +20,6 @@ from skimage.exposure import rescale_intensity
 from skimage.measure import regionprops
 from skimage.segmentation import morphological_chan_vese
 
-from deepcell_label.labelmaker import LabelInfoMaker
-
 
 class BaseEdit(object):
     """
@@ -516,41 +514,6 @@ class ZStackEdit(BaseEdit):
                 self.del_cell_info(del_label=label_2, frame=self.frame_id)
                 label_frame.frame[..., self.feature] = img
 
-    def action_predict_single(self):
-        """
-        predicts zstack relationship for current frame based on previous frame
-        useful for finetuning corrections one frame at a time
-        """
-        if self.frame_id > 0:
-            prev_frame = self.frame_id - 1
-            img = self.project.label_frames[prev_frame].frame[..., self.feature]
-            next_img = self.frame[..., self.feature]
-            updated_img = predict_zstack_cell_ids(img, next_img)
-
-            # check if image changed
-            comparison = np.where(next_img != updated_img)
-            self.y_changed = np.any(comparison)
-
-            # if the image changed, update cell info and label frame
-            if self.y_changed:
-                self.remake_cell_info()
-                self.frame[..., self.feature] = updated_img
-
-    def action_predict_zstack(self):
-        """
-        use location of cells in image to predict which annotations are
-        different slices of the same cell
-        """
-        for frame_id in range(self.project.num_frames - 1):
-            img = self.project.label_frames[frame_id].frame[..., self.feature]
-            next_img = self.project.label_frames[frame_id + 1].frame[..., self.feature]
-            predicted_next = predict_zstack_cell_ids(img, next_img)
-            self.project.label_frames[frame_id + 1].frame[..., self.feature] = predicted_next
-
-        # remake cell_info dict based on new annotations
-        self.y_changed = True
-        self.remake_cell_info()
-
     def action_save_zstack(self, bucket):
         # save file to BytesIO object
         store_npz = io.BytesIO()
@@ -603,13 +566,6 @@ class ZStackEdit(BaseEdit):
 
         # if deleting cell, frames and info have necessarily changed
         self.y_changed = self.labels_changed = True
-
-    def remake_cell_info(self):
-        """Remake the entire cell_info and cell_ids dicts"""
-        label_maker = LabelInfoMaker(self.project.label_array)
-        self.labels.cell_info = label_maker.cell_info
-        self.labels.cell_ids = label_maker.cell_ids
-        self.labels_changed = True
 
 
 class TrackEdit(BaseEdit):

@@ -23,7 +23,6 @@ from skimage.external.tifffile import TiffFile
 
 from deepcell_label.imgutils import reshape
 from deepcell_label.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_INPUT_BUCKET
-from deepcell_label.labelmaker import LabelInfoMaker
 
 DCL_AXES = 'ZYXC'
 
@@ -41,15 +40,72 @@ class Loader():
 
         if self.labeled_url is None:
             self.load()
-            tracking = is_trk(self.url)
         else:
             self.load_raw()
             self.load_labeled()
-            tracking = is_trk(self.labeled_url)
 
-        label_maker = LabelInfoMaker(self.label_array, tracking)
-        self.cell_ids = label_maker.cell_ids
-        self.cell_info = label_maker.cell_info
+        self.num_frames = self.raw_array.shape[0]
+        self.height = self.raw_array.shape[1]
+        self.width = self.raw_array.shape[2]
+        self.num_channels = self.raw_array.shape[-1]
+        self.num_features = self.label_array.shape[-1]
+
+        self._cell_ids = None
+        self._cell_info = None
+        self._channels = None
+        self._cell_type_presets = None
+        self._cell_type_assignments = None
+
+    @property
+    def cell_ids(self):
+        if self._cell_ids is None:
+            cell_ids = {}
+            for feature in range(self.num_features):
+                # Compute the labels in the feature
+                labels = self.label_array[..., feature]
+                cells = np.unique(labels)[np.nonzero(np.unique(labels))]
+                cell_ids[feature] = cells
+            self._cell_ids = cell_ids
+        return self._cell_ids
+
+    @property
+    def cell_info(self):
+        if self._cell_info is None:
+            cell_info = {}
+            for feature in range(self.num_features):
+                labels = self.label_array[..., feature]
+                cell_info[feature] = {}
+                for cell in self.cell_ids[feature]:
+                    cell = int(cell)
+                    cell_info[feature][cell] = {'label': str(cell),
+                                                'frames': [],
+                                                'slices': ''}
+                    for frame in range(self.num_frames):
+                        if cell in labels[frame, ...]:
+                            cell_info[feature][cell]['frames'].append(int(frame))
+            self._cell_info = cell_info
+        return self._cell_info
+
+    @property
+    def channels(self):
+        if self._channels is None:
+            self._channels = {i: f'channel {i}' for i in range(self.num_channels)}
+        return self._channels
+
+    @property
+    def cell_type_presets(self):
+        if self._cell_type_presets is None:
+            self._cell_type_presets = {0: {'name': 'other', 'channels': None, 'channelNames': None}}
+        return self._cell_type_presets
+
+    @property
+    def cell_type_assignments(self):
+        if self._cell_type_assignments is None:
+            self._cell_type_assignments = {
+                feature: {int(cell): 0 for cell in self.cell_ids[feature]}
+                for feature in range(self.num_features)
+            }
+        return self._cell_type_assignments
 
     def load(self):
         """
@@ -57,9 +113,7 @@ class Loader():
         """
         url = self.url
         r = requests.get(url)
-        data = r.content
-        # if r.status_code !== 200:
-        #     raise ValueError(r.status_code)
+        data = io.BytesIO(r.content)
         if is_npz(url):
             raw_array = load_raw_npz(data)
             label_array = load_labeled_npz(data)
@@ -76,7 +130,9 @@ class Loader():
         elif is_zip(url):
             raw_array = load_raw_zip(data)
             label_array = load_labeled_zip(data)
-            additional_info = load_info_zip(data)
+            self._channels = load_channels(data)
+            self._cell_type_presets = load_cell_type_presets(data)
+            self._cell_type_assignments = load_cell_type_assignments(data)
         else:
             ext = pathlib.Path(url).suffix
             raise InvalidExtension('invalid file extension: {}'.format(ext))
@@ -254,14 +310,14 @@ def load_tiff(data):
 
 
 def open_zip(data):
-    return zipfile.ZipFile(io.BytesIO(data), 'r')
+    return zipfile.ZipFile(data, 'r')
 
 
 def load_raw_zip(data):
     zip_file = open_zip(data)
-    fnames = zip_file.namelist()
+    filenames = zip_file.namelist()
 
-    if 'X.npy' in fnames:
+    if 'X.npy' in filenames:
         X = load_npy_from_zip(zip_file, 'X.npy')
     else:
         X = load_zipped_tiffs(zip_file)
@@ -271,9 +327,9 @@ def load_raw_zip(data):
 
 def load_labeled_zip(data, load_tiffs=False):
     zip_file = open_zip(data)
-    fnames = zip_file.namelist()
+    filenames = zip_file.namelist()
 
-    if 'y.npy' in fnames:
+    if 'y.npy' in filenames:
         y = load_npy_from_zip(zip_file, 'y.npy')
     elif load_tiffs:
         y = load_zipped_tiffs(zip_file)
@@ -283,20 +339,28 @@ def load_labeled_zip(data, load_tiffs=False):
     return y
 
 
-def load_info_zip(data):
+def load_channels(data):
     zip_file = open_zip(data)
-    fnames = zip_file.namelist()
+    filenames = zip_file.namelist()
+    if 'channels.json' in filenames:
+        return json.loads(zip_file.read('channels.json'))
+    return None
 
-    info = {}
-    if 'channels.json' in fnames:
-        channels = json.loads(zip_file.read('channels.json'))
-        info['channels'] = channels
 
-    if 'classes/cell_type.json' in fnames:
-        cell_types = json.loads(zip_file.read('classes/cell_type.json'))
-        info['cell_types'] = cell_types
+def load_cell_type_presets(data):
+    zip_file = open_zip(data)
+    filenames = zip_file.namelist()
+    if 'classes/cell_type.json' in filenames:
+        return json.loads(zip_file.read('classes/cell_type.json'))['cell_types']
+    return None
 
-    return info
+
+def load_cell_type_assignments(data):
+    zip_file = open_zip(data)
+    filenames = zip_file.namelist()
+    if 'classes/cell_type.json' in filenames:
+        return json.loads(zip_file.read('classes/cell_type.json'))['assignments']
+    return None
 
 
 def load_zipped_tiffs(container):
@@ -307,7 +371,7 @@ def load_zipped_tiffs(container):
     channels = [
         load_tiff(container.open(item).read())
         for item in container.infolist()
-        if not str(item.filename).startswith('__MACOSX/') and is_tiff(str(item.filename))
+        if is_tiff(str(item.filename)) and not str(item.filename).startswith('__MACOSX/')
     ]
     return np.array(channels)
 

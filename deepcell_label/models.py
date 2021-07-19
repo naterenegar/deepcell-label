@@ -23,7 +23,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.schema import PrimaryKeyConstraint, ForeignKeyConstraint
-import sqlalchemy.types as types
+from sqlalchemy.types import TypeDecorator, LargeBinary, JSON
 
 from deepcell_label.imgutils import grayscale_pngify, pngify, add_outlines
 
@@ -34,10 +34,10 @@ logger = logging.getLogger('models.Project')  # pylint: disable=C0103
 db = SQLAlchemy(session_options={'autoflush': False})  # pylint: disable=C0103
 
 
-class Npz(types.TypeDecorator):
+class Npz(TypeDecorator):
     """Marshals a numpy array to and from a compressed npz"""
 
-    impl = types.LargeBinary
+    impl = LargeBinary
 
     def process_bind_param(self, value, dialect):
         if value is None:
@@ -138,33 +138,29 @@ class Project(db.Model):
 
     def __init__(self, loader):
         init_start = timeit.default_timer()
-        raw = loader.raw_array
-        label = loader.label_array
 
         # Record static project attributes
         self.path = loader.url
         self.source = 's3'
-        self.num_frames = raw.shape[0]
-        self.height = raw.shape[1]
-        self.width = raw.shape[2]
-        self.num_channels = raw.shape[-1]
-        self.num_features = label.shape[-1]
+        self.num_frames = loader.num_frames
+        self.height = loader.height
+        self.width = loader.width
+        self.num_channels = loader.num_channels
+        self.num_features = loader.num_features
         cmap = plt.get_cmap('viridis')
         cmap.set_bad('black')
         self.colormap = cmap
 
         # Create frames from raw, RGB, and labeled images
         self.raw_frames = [RawFrame(i, frame)
-                           for i, frame in enumerate(raw)]
+                           for i, frame in enumerate(loader.raw_array)]
         self.rgb_frames = [RGBFrame(i, frame)
-                           for i, frame in enumerate(raw)]
+                           for i, frame in enumerate(loader.raw_array)]
         self.label_frames = [LabelFrame(i, frame)
-                             for i, frame in enumerate(label)]
+                             for i, frame in enumerate(loader.label_array)]
 
         # Create label metadata
-        self.labels = Labels()
-        self.labels.cell_ids = loader.cell_ids
-        self.labels.cell_info = loader.cell_info
+        self.labels = Labels(loader)
 
         logger.debug('Initialized project from %s in %ss.',
                      self.path, timeit.default_timer() - init_start)
@@ -467,10 +463,16 @@ class Labels(db.Model):
     # Label metadata
     cell_ids = db.Column(db.PickleType(comparator=lambda *a: False))
     cell_info = db.Column(db.PickleType(comparator=lambda *a: False))
+    channels = db.Column(JSON)
+    cell_type_presets = db.Column(JSON)
+    cell_type_assignments = db.Column(JSON)
 
-    def __init__(self):
-        self.cell_ids = {}
-        self.cell_info = {}
+    def __init__(self, loader):
+        self.cell_ids = loader.cell_ids
+        self.cell_info = loader.cell_info
+        self.channels = loader.channels
+        self.cell_type_presets = loader.cell_type_presets
+        self.cell_type_assignments = loader.cell_type_assignments
 
     @property
     def tracks(self):
