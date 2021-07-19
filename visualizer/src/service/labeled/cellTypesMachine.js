@@ -2,7 +2,7 @@ import { assign, Machine } from 'xstate';
 
 function fetchCellTypes(context) {
   const { projectId, feature } = context;
-  const location = `/api/cell-types`;
+  const location = `/api/cell-types/${projectId}/${feature}`;
   return fetch(location).then(response => response.json());
 }
 
