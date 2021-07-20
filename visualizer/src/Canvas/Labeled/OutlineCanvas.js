@@ -82,7 +82,17 @@ const OutlineCanvas = ({ className }) => {
     }
     outlineSelected(data, labeledArray, foreground, background, fColor, bColor);
     hiddenCtx.current.putImageData(data, 0, 0);
-  }, [labeledArray, cellType, foreground, background, outline, invert, sw, sh]);
+  }, [
+    labeledArray,
+    cellType,
+    cellTypeLabels,
+    foreground,
+    background,
+    outline,
+    invert,
+    sw,
+    sh,
+  ]);
 
   useEffect(() => {
     ctx.current.save();
@@ -102,6 +112,7 @@ const OutlineCanvas = ({ className }) => {
   }, [
     labeledArray,
     cellType,
+    cellTypeLabels,
     foreground,
     background,
     outline,
