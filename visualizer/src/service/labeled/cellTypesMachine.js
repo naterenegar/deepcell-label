@@ -34,7 +34,7 @@ const createCellTypesMachine = ({ projectId, feature = 0 }) =>
                 loading: {
                   invoke: {
                     src: fetchCellTypes,
-                    onDone: { actions: 'saveCellTypes' },
+                    onDone: { target: 'loaded', actions: 'saveCellTypes' },
                   },
                 },
                 loaded: { type: 'final' },
@@ -46,7 +46,7 @@ const createCellTypesMachine = ({ projectId, feature = 0 }) =>
                 loading: {
                   invoke: {
                     src: fetchCellTypeLabels,
-                    onDone: { actions: 'saveCellTypeLabels' },
+                    onDone: { target: 'loaded', actions: 'saveCellTypeLabels' },
                   },
                 },
                 loaded: { type: 'final' },
