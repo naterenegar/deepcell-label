@@ -5,6 +5,7 @@ import debounce from 'lodash.debounce';
 import { useEffect, useRef, useState } from 'react';
 import Canvas from './Canvas/Canvas';
 import CellTypes from './Controls/CellTypes/CellTypes';
+import ReviewCellType from './Controls/CellTypes/ReviewCellType';
 import ImageControls from './Controls/ImageControls/ImageControls';
 import Footer from './Footer/Footer';
 import Instructions from './Instructions/Instructions';
@@ -96,6 +97,7 @@ function Label() {
         </Box> */}
         <Box className={styles.cellTypesBox}>
           <CellTypes />
+          <ReviewCellType />
         </Box>
         <Box ref={canvasBoxRef} className={styles.canvasBox}>
           <Canvas />
