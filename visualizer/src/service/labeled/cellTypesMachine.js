@@ -1,8 +1,8 @@
 import { assign, Machine } from 'xstate';
 
 function fetchCellTypes(context) {
-  const { projectId, feature } = context;
-  const location = `/api/cell-types/${projectId}/${feature}`;
+  const { projectId } = context;
+  const location = `/api/cell-types/${projectId}`;
   return fetch(location).then(response => response.json());
 }
 
@@ -12,7 +12,7 @@ function fetchCellTypeLabels(context) {
   return fetch(location).then(response => response.json());
 }
 
-const createCellTypesMachine = (projectId, feature) =>
+const createCellTypesMachine = ({ projectId, feature = 0 }) =>
   Machine(
     {
       id: `cell_types_${feature}`,
@@ -69,9 +69,9 @@ const createCellTypesMachine = (projectId, feature) =>
         setCellType: assign({
           cellType: (_, { cellType }) => cellType,
         }),
-        saveCellTypes: assign({ cellTypes: (_, { data }) => data.cellTypes }),
+        saveCellTypes: assign({ cellTypes: (_, { data }) => data }),
         saveCellTypeLabels: assign({
-          cellTypeLabels: (_, { data }) => data.cellTypeLabels,
+          cellTypeLabels: (_, { data }) => data,
         }),
       },
     }

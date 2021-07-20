@@ -42,9 +42,9 @@ const OutlineCanvas = ({ className }) => {
 
   const cellTypes = useCellTypes();
   const cellType = useSelector(cellTypes, state => state.context.cellType);
-  const instanceLabels = useSelector(
+  const cellTypeLabels = useSelector(
     cellTypes,
-    state => state.context.instanceLabels
+    state => state.context.cellTypeLabels
   );
 
   const feature = useFeature(featureIndex);
@@ -76,7 +76,7 @@ const OutlineCanvas = ({ className }) => {
     const bColor = red;
     const hColor = [255, 255, 255, 128];
     highlightImageData(data, labeledArray, foreground, hColor);
-    highlightCellType(data, labeledArray, cellType, instanceLabels, hColor);
+    highlightCellType(data, labeledArray, cellType, cellTypeLabels, hColor);
     if (outline) {
       outlineAll(data, labeledArray, fColor);
     }

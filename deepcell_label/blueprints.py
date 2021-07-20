@@ -111,15 +111,15 @@ def channels(project_id):
     return project.labels.channels
 
 
-@bp.route('/api/cell-types/<project_id>/<int:feature>')
-def cell_types(project_id, feature):
+@bp.route('/api/cell-types/<project_id>')
+def cell_types(project_id):
     project = Project.get(project_id)
     if not project:
         return jsonify({'error': f'project {project_id} not found'}), 404
-    return project.labels.cell_type_presets[feature]
+    return project.labels.cell_type_presets
 
 
-@bp.route('/api/cell-type-labels/<project_id>/<int:feature>')
+@bp.route('/api/cell-type-labels/<project_id>/<feature>')
 def cell_type_labels(project_id, feature):
     project = Project.get(project_id)
     if not project:
