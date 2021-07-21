@@ -1,50 +1,26 @@
 /** Helper functions to manipulate ImageData. */
 
-/** Highlight cell type */
-export function highlightCellType(
-  imageData,
-  labeledArray,
-  cellType,
-  cellTypeLabels,
-  color
-) {
-  const [r, g, b, a] = color;
-  const { data, width, height } = imageData;
-  for (let j = 0; j < height; j += 1) {
-    for (let i = 0; i < width; i += 1) {
-      const cell = Math.abs(labeledArray[j][i]);
-      if (cellTypeLabels[cell] === Number(cellType)) {
-        data[(j * width + i) * 4 + 0] = r;
-        data[(j * width + i) * 4 + 1] = g;
-        data[(j * width + i) * 4 + 2] = b;
-        data[(j * width + i) * 4 + 3] = a;
-      }
-    }
-  }
-}
+type Label = number;
 
-/**
- * Highlights a label with color.
- * @param {ImageData} imageData where we draw the highlight
- * @param {Array} labeledArray describes label at each pixel; has negative label values on label border
- * @param {int} label label to highlight
- * @param {Array} color color to highlight label with
- */
-export function highlightImageData(imageData, labeledArray, label, color) {
-  if (label === 0) {
-    return;
-  }
-  const [r, g, b, a] = color;
+type RGBAColor = [number, number, number, number];
+
+type DrawFunction = (label: Label) => RGBAColor;
+
+/** Generalized function to draw an image from a label array. */
+export function drawLabels(
+  imageData: ImageData,
+  labelArray: Label[][],
+  drawFunction: DrawFunction
+): void {
   const { data, width, height } = imageData;
   for (let j = 0; j < height; j += 1) {
     for (let i = 0; i < width; i += 1) {
-      const element = Math.abs(labeledArray[j][i]);
-      if (element === label) {
-        data[(j * width + i) * 4 + 0] = r;
-        data[(j * width + i) * 4 + 1] = g;
-        data[(j * width + i) * 4 + 2] = b;
-        data[(j * width + i) * 4 + 3] = a;
-      }
+      const label = labelArray[j][i];
+      const [r, g, b, a] = drawFunction(label);
+      data[(j * width + i) * 4 + 0] = r;
+      data[(j * width + i) * 4 + 1] = g;
+      data[(j * width + i) * 4 + 2] = b;
+      data[(j * width + i) * 4 + 3] = a;
     }
   }
 }
@@ -54,76 +30,15 @@ export function highlightImageData(imageData, labeledArray, label, color) {
  * @param {ImageData} imageData
  * @param {float} opacity between 0 and 1; 0 makes the image transparent, and 1 does nothing
  */
-export function opacityImageData(imageData, opacity) {
+export function opacityImageData(imageData: ImageData, opacity: number): void {
   const { data } = imageData;
   for (let i = 0; i < data.length; i += 4) {
     data[i + 3] *= opacity;
   }
 }
 
-/**
- * Draws fColor around the foreground label and bColor
- * @param {ImageData} imageData where to draw outlines
- * @param {Array} labeledArray describes the label at each pixel; has negative values on the label borders
- * @param {int} foreground value of foreground label
- * @param {int} background value of background label
- * @param {Array} fColor RGBA color
- * @param {Array} bColor RGBA color
- */
-export function outlineSelected(
-  imageData,
-  labeledArray,
-  foreground,
-  background,
-  fColor,
-  bColor
-) {
-  const [fr, fg, fb, fa] = fColor;
-  const [br, bg, bb, ba] = bColor;
-  const { data, width, height } = imageData;
-  for (let j = 0; j < height; j += 1) {
-    for (let i = 0; i < width; i += 1) {
-      const label = labeledArray[j][i];
-      if (foreground !== 0 && label === -1 * foreground) {
-        data[(j * width + i) * 4 + 0] = fr;
-        data[(j * width + i) * 4 + 1] = fg;
-        data[(j * width + i) * 4 + 2] = fb;
-        data[(j * width + i) * 4 + 3] = fa;
-      } else if (background !== 0 && label === -1 * background) {
-        data[(j * width + i) * 4 + 0] = br;
-        data[(j * width + i) * 4 + 1] = bg;
-        data[(j * width + i) * 4 + 2] = bb;
-        data[(j * width + i) * 4 + 3] = ba;
-      }
-    }
-  }
-}
-
-/**
- * Draws color outlines around all labels in labeledArray.
- * @param {ImageData} imageData where to draw outlines
- * @param {Array} labeledArray describes the label at each pixel; has negative values on the label borders
- * @param {Array} color RGBA color
- * @returns
- */
-export function outlineAll(imageData, labeledArray, color) {
-  const { data, width, height } = imageData;
-  const [r, g, b, a] = color;
-  for (let j = 0; j < height; j += 1) {
-    for (let i = 0; i < width; i += 1) {
-      const label = labeledArray[j][i];
-      if (label < 0) {
-        data[(j * width + i) * 4 + 0] = r;
-        data[(j * width + i) * 4 + 1] = g;
-        data[(j * width + i) * 4 + 2] = b;
-        data[(j * width + i) * 4 + 3] = a;
-      }
-    }
-  }
-}
-
 // contrast between 0 and 1
-export function contrastImageData(imageData, contrast) {
+export function contrastImageData(imageData: ImageData, contrast: number) {
   const { data } = imageData;
   contrast *= 255; // scale fraction to full range of pixel values
   const factor = (255 + contrast) / (255.01 - contrast); // add .1 to avoid /0 error
@@ -135,7 +50,10 @@ export function contrastImageData(imageData, contrast) {
 }
 
 // brightness between -1 and 1
-export function brightnessImageData(imageData, brightness) {
+export function brightnessImageData(
+  imageData: ImageData,
+  brightness: number
+): void {
   const { data } = imageData;
   brightness *= 255; // scale fraction to full range of pixel values
   for (let i = 0; i < data.length; i += 4) {
@@ -145,7 +63,11 @@ export function brightnessImageData(imageData, brightness) {
   }
 }
 
-export function adjustRangeImageData(imageData, min, max) {
+export function adjustRangeImageData(
+  imageData: ImageData,
+  min: number,
+  max: number
+): void {
   const { data } = imageData;
   const diff = max - min;
   const scale = diff === 0 ? 255 : 255 / diff;
@@ -158,7 +80,7 @@ export function adjustRangeImageData(imageData, min, max) {
   }
 }
 
-export function recolorImageData(imageData, color) {
+export function recolorImageData(imageData: ImageData, color: RGBAColor) {
   const { data } = imageData;
   const [red, green, blue] = color;
   for (let i = 0; i < data.length; i += 4) {
@@ -169,7 +91,7 @@ export function recolorImageData(imageData, color) {
   return data;
 }
 
-export function invertImageData(imageData) {
+export function invertImageData(imageData: ImageData) {
   const { data } = imageData;
   for (let i = 0; i < data.length; i += 4) {
     //pixel values in 4-byte blocks (r,g,b,a)
@@ -181,13 +103,14 @@ export function invertImageData(imageData) {
 
 /**
  * Draws a a solid outline circle of radius brushSize on the context at (x, y).
- * @param {*} ctx
- * @param {*} x
- * @param {*} y
- * @param {*} brushSize
- * @param {*} brushColor
  */
-export function drawBrush(ctx, x, y, brushSize, brushColor) {
+export function drawBrush(
+  ctx: any,
+  x: number,
+  y: number,
+  brushSize: number,
+  brushColor: RGBAColor
+) {
   const [r, g, b, a] = brushColor;
   const [sx, sy, sw, sh] = [
     x - brushSize + 1,
@@ -212,12 +135,13 @@ export function drawBrush(ctx, x, y, brushSize, brushColor) {
 
 /**
  * Draws a translucent, filled-in circle of radius brushSize on the context at (x, y).
- * @param {*} ctx
- * @param {*} x
- * @param {*} y
- * @param {*} brushSize
  */
-export function drawTrace(ctx, x, y, brushSize) {
+export function drawTrace(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  brushSize: number
+) {
   const [sx, sy, sw, sh] = [
     x - brushSize + 1,
     y - brushSize + 1,
@@ -226,7 +150,6 @@ export function drawTrace(ctx, x, y, brushSize) {
   ];
   const imageData = ctx.getImageData(sx, sy, sw, sh);
   const { data, height, width } = imageData;
-  const radius = brushSize - 1;
   for (let j = 0; j < height; j += 1) {
     for (let i = 0; i < width; i += 1) {
       if (insideBrush(i, j, brushSize)) {
@@ -243,13 +166,14 @@ export function drawTrace(ctx, x, y, brushSize) {
 /**
  * Draws a bounding box between the two points.
  * Has an opaque outline and a translucent interior.
- * @param {*} ctx
- * @param {*} x1
- * @param {*} y1
- * @param {*} x2
- * @param {*} y2
  */
-export function drawBox(ctx, x1, y1, x2, y2) {
+export function drawBox(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+) {
   const [sx, sy] = [Math.min(x1, x2), Math.min(y1, y2)];
   const [sw, sh] = [Math.abs(x1 - x2) + 1, Math.abs(y1 - y2) + 1];
   const imageData = ctx.getImageData(sx, sy, sw, sh);
@@ -275,22 +199,15 @@ export function drawBox(ctx, x1, y1, x2, y2) {
 
 /**
  * Returns the distance of (x, y) to the origin (0, 0).
- * @param {Number} x
- * @param {Number} y
- * @returns {Number} distance to origin
  */
-function distance(x, y) {
+function distance(x: number, y: number): number {
   return Math.sqrt(Math.pow(y, 2) + Math.pow(x, 2));
 }
 
 /**
  * Returns whether the pixel at (x, y) of the brush bounding box is on the brush border.
- * @param {*} x
- * @param {*} y
- * @param {*} brushSize
- * @returns {boolean}
  */
-function onBrush(x, y, brushSize) {
+function onBrush(x: number, y: number, brushSize: number): boolean {
   const radius = brushSize - 1;
   return (
     Math.floor(distance(x - radius, y - radius)) === radius &&
@@ -304,12 +221,8 @@ function onBrush(x, y, brushSize) {
 
 /**
  * Returns whether the pixel at (x, y) of the brush bounding box is inside the brush.
- * @param {*} x
- * @param {*} y
- * @param {*} brushSize
- * @returns
  */
-function insideBrush(x, y, brushSize) {
+function insideBrush(x: number, y: number, brushSize: number): boolean {
   const radius = brushSize - 1;
   return Math.floor(distance(x - radius, y - radius)) <= radius;
 }

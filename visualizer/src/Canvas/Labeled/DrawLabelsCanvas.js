@@ -1,15 +1,10 @@
 import { useSelector } from '@xstate/react';
 import React, { useEffect, useRef } from 'react';
-import {
-  useCanvas,
-  useFeature,
-  useLabeled,
-  useToolbar,
-} from '../../ServiceContext';
+import { useCanvas, useFeature, useLabeled } from '../../ServiceContext';
 import { useStyles } from '../Canvas';
-import { opacityImageData } from '../canvasUtils';
+import { drawLabels } from '../canvasUtils';
 
-export const LabeledCanvas = () => {
+const DrawLabelsCanvas = ({ draw }) => {
   const styles = useStyles();
 
   const canvas = useCanvas();
@@ -19,31 +14,20 @@ export const LabeledCanvas = () => {
   const scale = useSelector(canvas, state => state.context.scale);
   const sw = useSelector(canvas, state => state.context.width);
   const sh = useSelector(canvas, state => state.context.height);
-
   const width = sw * scale * window.devicePixelRatio;
   const height = sh * scale * window.devicePixelRatio;
 
   const labeled = useLabeled();
   const featureIndex = useSelector(labeled, state => state.context.feature);
-  const highlight = useSelector(labeled, state => state.context.highlight);
-  const opacity = useSelector(labeled, state => state.context.opacity);
-
   const feature = useFeature(featureIndex);
-  const labeledImage = useSelector(
-    feature,
-    state => state.context.labeledImage
-  );
-  let labeledArray = useSelector(feature, state => state.context.labeledArray);
-  if (!labeledArray) {
-    labeledArray = Array(sh).fill(Array(sw).fill(0));
+  let labelArray = useSelector(feature, state => state.context.labeledArray);
+  if (!labelArray) {
+    labelArray = Array(sh).fill(Array(sw).fill(0));
   }
-
-  const toolbar = useToolbar();
-  const foreground = useSelector(toolbar, state => state.context.foreground);
-  const background = useSelector(toolbar, state => state.context.background);
 
   const canvasRef = useRef();
   const ctx = useRef();
+  // hidden canvas convert the outline array into an image
   const hiddenCanvasRef = useRef();
   const hiddenCtx = useRef();
 
@@ -57,11 +41,10 @@ export const LabeledCanvas = () => {
   }, [sw, sh]);
 
   useEffect(() => {
-    hiddenCtx.current.drawImage(labeledImage, 0, 0);
-    let data = hiddenCtx.current.getImageData(0, 0, sw, sh);
-    opacityImageData(data, opacity);
+    const data = new ImageData(sw, sh);
+    drawLabels(data, labelArray, draw);
     hiddenCtx.current.putImageData(data, 0, 0);
-  }, [labeledImage, labeledArray, foreground, highlight, opacity, sh, sw]);
+  }, [sw, sh, labelArray, draw]);
 
   useEffect(() => {
     ctx.current.save();
@@ -78,33 +61,13 @@ export const LabeledCanvas = () => {
       height
     );
     ctx.current.restore();
-  }, [
-    labeledImage,
-    labeledArray,
-    foreground,
-    highlight,
-    opacity,
-    sw,
-    sh,
-    sx,
-    sy,
-    zoom,
-    width,
-    height,
-  ]);
+  }, [labelArray, draw, sw, sh, sx, sy, zoom, width, height]);
 
   return (
     <>
       {/* hidden processing canvas */}
+      <canvas hidden={true} ref={hiddenCanvasRef} width={sw} height={sh} />
       <canvas
-        id='labeled-processing'
-        hidden={true}
-        ref={hiddenCanvasRef}
-        width={sw}
-        height={sh}
-      />
-      <canvas
-        id='labeled-canvas'
         ref={canvasRef}
         width={width}
         height={height}
@@ -114,4 +77,4 @@ export const LabeledCanvas = () => {
   );
 };
 
-export default LabeledCanvas;
+export default DrawLabelsCanvas;

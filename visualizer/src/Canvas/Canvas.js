@@ -4,13 +4,12 @@ import { makeStyles } from '@material-ui/core/styles';
 import { useSelector } from '@xstate/react';
 import React, { useEffect } from 'react';
 import { useCanvas, useLabeled, useRaw, useToolbar } from '../ServiceContext';
-import LabeledCanvas from './Labeled/LabeledCanvas';
-import OutlineCanvas from './Labeled/OutlineCanvas';
+import CellTypeCanvas from './Labeled/CellTypeCanvas';
 import RawCanvas from './Raw/RawCanvas';
 import BrushCanvas from './Tool/BrushCanvas';
 import ThresholdCanvas from './Tool/ThresholdCanvas';
 
-const useStyles = makeStyles({
+export const useStyles = makeStyles({
   canvasBox: {
     alignSelf: 'flex-start',
     position: 'absolute',
@@ -110,8 +109,7 @@ export const Canvas = () => {
         />
       )}
       {raw && <RawCanvas className={styles.canvas} />}
-      {labeled && <LabeledCanvas className={styles.canvas} />}
-      {labeled && <OutlineCanvas className={styles.canvas} />}
+      {labeled && <CellTypeCanvas />}
       {tool === 'brush' && <BrushCanvas className={styles.canvas} />}
       {tool === 'threshold' && <ThresholdCanvas className={styles.canvas} />}
     </Box>
