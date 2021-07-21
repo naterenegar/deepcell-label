@@ -181,10 +181,10 @@ const toolMachine = Machine(
       toolActor: null,
     },
     entry: 'spawnTool',
-    invoke: [
-      { src: 'listenForToolHotkeys' },
-      { src: 'listenForActionHotkeys' },
-    ],
+    // invoke: [
+    //   { src: 'listenForToolHotkeys' },
+    //   { src: 'listenForActionHotkeys' },
+    // ],
     type: 'parallel',
     states: {
       colorMode: colorModeState,
