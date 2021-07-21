@@ -18,7 +18,7 @@ interface CellTypeButtonProps extends ToggleButtonProps {
 
 const useStyles = makeStyles({
   button: {
-    padding: 4,
+    padding: '0.1em',
   },
 });
 
