@@ -5,7 +5,6 @@ import Grid from '@material-ui/core/Grid';
 import React from 'react';
 import FeatureSelect from './FeatureSelect';
 import OpacitySlider from './OpacitySlider';
-import OutlineToggle from './OutlineToggle';
 
 const useStyles = makeStyles(theme => ({
   title: {
@@ -29,7 +28,6 @@ const LabeledControls = () => {
             <FormLabel component='legend' className={styles.title}>
               Segmentations
             </FormLabel>
-            <OutlineToggle />
           </Box>
         </Grid>
         <Grid item>
