@@ -1,5 +1,4 @@
 import { makeStyles } from '@material-ui/core';
-import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import { useSelector } from '@xstate/react';
 import React from 'react';
@@ -9,6 +8,11 @@ const useStyles = makeStyles({
   buttons: {
     display: 'flex',
     flexDirection: 'column',
+    maxWidth: '100%',
+  },
+  button: {
+    display: 'block',
+    width: '100%',
   },
 });
 
@@ -32,18 +36,18 @@ function ReviewButtons({ cell }: ReviewButtonsProps) {
   const isSameCellType = selectedCellType === currentCellType;
 
   return (
-    <Box className={styles.buttons}>
-      <Button variant='contained' color='primary'>
+    <>
+      <Button className={styles.button} variant='contained' color='primary'>
         {isSameCellType
           ? `Confirm ${currentCellType.name}`
           : `Switch ${selectedCellType.name} to ${currentCellType.name}`}
       </Button>
-      <Button variant='contained' color='secondary'>
+      <Button className={styles.button} variant='contained' color='secondary'>
         {isSameCellType
           ? `Remove ${currentCellType.name}`
           : `Keep ${selectedCellType.name}`}
       </Button>
-    </Box>
+    </>
   );
 }
 
@@ -56,7 +60,7 @@ function ReviewCellType() {
     (state: any) => state.context.cellType
   );
 
-  return cell && cellType !== null && <ReviewButtons cell={cell} />;
+  return cell !== 0 && cellType !== null && <ReviewButtons cell={cell} />;
 }
 
 export default ReviewCellType;

@@ -39,7 +39,9 @@ const useStyles = makeStyles(theme => ({
     padding: theme.spacing(1),
   },
   cellTypesBox: {
+    width: '200px',
     flex: '0 0 auto',
+    padding: theme.spacing(1),
   },
   canvasBox: {
     position: 'relative',

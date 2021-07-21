@@ -17,6 +17,9 @@ interface CellTypeButtonProps extends ToggleButtonProps {
 }
 
 const useStyles = makeStyles({
+  buttonGroup: {
+    width: '100%',
+  },
   button: {
     padding: '0.1em',
   },
@@ -55,6 +58,7 @@ function CellTypeButton(props: CellTypeButtonProps) {
 }
 
 function CellTypes() {
+  const styles = useStyles();
   const cellTypesMachine = useCellTypes();
 
   const cellTypes = useSelector(
@@ -63,7 +67,7 @@ function CellTypes() {
   );
 
   return (
-    <ToggleButtonGroup orientation='vertical'>
+    <ToggleButtonGroup orientation='vertical' className={styles.buttonGroup}>
       {Object.entries(cellTypes).map(([id, cellType]: [string, any]) => (
         <CellTypeButton key={id} id={id} cellType={cellType} />
       ))}
