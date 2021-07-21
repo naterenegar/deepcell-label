@@ -4,7 +4,7 @@ import {
   useCanvas,
   useFeature,
   useLabeled,
-  useToolbar,
+  useSelect,
 } from '../../ServiceContext';
 import { useStyles } from '../Canvas';
 import { opacityImageData } from '../canvasUtils';
@@ -38,9 +38,9 @@ export const LabeledCanvas = () => {
     labeledArray = Array(sh).fill(Array(sw).fill(0));
   }
 
-  const toolbar = useToolbar();
-  const foreground = useSelector(toolbar, state => state.context.foreground);
-  const background = useSelector(toolbar, state => state.context.background);
+  const select = useSelect();
+  const foreground = useSelector(select, state => state.context.foreground);
+  const background = useSelector(select, state => state.context.background);
 
   const canvasRef = useRef();
   const ctx = useRef();
