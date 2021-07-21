@@ -5,6 +5,7 @@ import debounce from 'lodash.debounce';
 import { useEffect, useRef, useState } from 'react';
 import Canvas from './Canvas/Canvas';
 import CellTypes from './Controls/CellTypes/CellTypes';
+import CellTypeHeader from './Controls/CellTypes/CellTypesHeader';
 import ReviewCellType from './Controls/CellTypes/ReviewCellType';
 import ImageControls from './Controls/ImageControls/ImageControls';
 import Footer from './Footer/Footer';
@@ -96,6 +97,7 @@ function Label() {
           {labeled && <SelectedPalette />}
         </Box> */}
         <Box className={styles.cellTypesBox}>
+          <CellTypeHeader />
           <CellTypes />
           <ReviewCellType />
         </Box>
