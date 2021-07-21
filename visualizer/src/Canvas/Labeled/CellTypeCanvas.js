@@ -1,11 +1,11 @@
 import { useSelector } from '@xstate/react';
 import { useCallback } from 'react';
-import { useCellTypes, useToolbar } from '../../ServiceContext';
+import { useCellTypes, useSelect } from '../../ServiceContext';
 import DrawLabelsCanvas from './DrawLabelsCanvas';
 import LabeledCanvas from './LabeledCanvas';
 
 function CellTypeCanvas() {
-  const toolbar = useToolbar();
+  const toolbar = useSelect();
   const selected = useSelector(toolbar, state => state.context.selected);
 
   const cellTypes = useCellTypes();

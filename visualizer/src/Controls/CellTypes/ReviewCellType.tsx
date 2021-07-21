@@ -3,7 +3,7 @@ import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import { useSelector } from '@xstate/react';
 import React from 'react';
-import { useCellTypes, useToolbar } from '../../ServiceContext';
+import { useCellTypes, useSelect } from '../../ServiceContext';
 
 const useStyles = makeStyles({
   buttons: {
@@ -48,7 +48,7 @@ function ReviewButtons({ cell }: ReviewButtonsProps) {
 }
 
 function ReviewCellType() {
-  const toolbar = useToolbar();
+  const toolbar = useSelect();
   const cell = useSelector(toolbar, (state: any) => state.context.selected);
   const cellTypes = useCellTypes();
   const cellType = useSelector(
