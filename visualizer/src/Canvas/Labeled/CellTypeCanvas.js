@@ -17,7 +17,9 @@ function CellTypeCanvas() {
 
   const drawHighlight = useCallback(
     label =>
-      Math.abs(label) === selected ? [255, 255, 255, 128] : [0, 0, 0, 0],
+      Math.abs(label) === selected && selected !== 0
+        ? [255, 255, 255, 128]
+        : [0, 0, 0, 0],
     [selected]
   );
 
