@@ -6,7 +6,7 @@ import LabeledCanvas from './LabeledCanvas';
 
 function CellTypeCanvas() {
   const toolbar = useSelect();
-  const selected = useSelector(toolbar, state => state.context.selected);
+  const cell = useSelector(toolbar, state => state.context.foreground);
 
   const cellTypes = useCellTypes();
   const cellType = useSelector(cellTypes, state => state.context.cellType);
@@ -17,10 +17,10 @@ function CellTypeCanvas() {
 
   const drawHighlight = useCallback(
     label =>
-      Math.abs(label) === selected && selected !== 0
+      cell !== 0 && Math.abs(label) === cell
         ? [255, 255, 255, 128]
         : [0, 0, 0, 0],
-    [selected]
+    [cell]
   );
 
   const drawOutline = useCallback(

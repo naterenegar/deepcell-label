@@ -87,7 +87,7 @@ function ReviewButtons({ cell }: ReviewButtonsProps) {
 
 function ReviewCellType() {
   const toolbar = useSelect();
-  const cell = useSelector(toolbar, (state: any) => state.context.selected);
+  const cell = useSelector(toolbar, (state: any) => state.context.foreground);
   const cellTypes = useCellTypes();
   const cellType = useSelector(
     cellTypes,
