@@ -4,6 +4,7 @@ from __future__ import division
 from __future__ import print_function
 
 import base64
+import copy
 import io
 import json
 import sys
@@ -46,6 +47,7 @@ class BaseEdit(object):
 
         self.y_changed = False
         self.labels_changed = False
+        self.cell_types_changed = False
 
     @property
     def frame(self):
@@ -95,22 +97,23 @@ class BaseEdit(object):
                              must be an existing cell type in the project
         """
         # TODO: store cell type assignments by feature and by frame
-        cell_type_labels = self.labels.cell_type_assignments
+        cell_type_labels = self.labels.cell_type_assignments[str(self.feature)]
 
         # Cell type must already exist
         cell_types = self.labels.cell_type_presets
-        if cell_type not in cell_types:
+        if str(cell_type) not in cell_types:
             cell_type_options = ''.join(
                 f'{key} ({cell_types[key]["name"]}), ' for key in cell_types)[:-2]
             raise ValueError(
                 f'Invalid cell type {cell_type}. Select from cell types {cell_type_options}')
         # Cell must already exist
-        if cell not in self.labels.cell_ids:
+        if cell not in self.labels.cell_ids[self.feature]:
             raise ValueError(f'Invalid cell {cell}')
 
-        cell_type_labels[cell] = cell_type
         # Explicitly copy cell type labels for changes to be detected and persisted by sqlalchemy
-        self.labels.cell_type_assignments = cell_type_labels.copy()
+        self.labels.cell_type_assignments = copy.deepcopy(self.labels.cell_type_assignments)
+        self.labels.cell_type_assignments[str(self.feature)][str(cell)] = cell_type
+        self.cell_types_changed = True
 
     def action_new_single_cell(self, label):
         """

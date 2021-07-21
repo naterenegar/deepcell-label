@@ -85,7 +85,7 @@ const createDeepcellLabelMachine = (projectId, bucket) =>
         BACKEND_REDO: { actions: forwardTo('api') },
 
         // from api
-        EDITED: { actions: forwardTo('image') },
+        EDITED: { actions: [forwardTo('image'), forwardTo('cellTypes')] },
 
         // from tool
         TOOL: { actions: forwardTo('canvas') },

@@ -1,4 +1,4 @@
-import { assign, Machine } from 'xstate';
+import { assign, Machine, sendParent } from 'xstate';
 
 function fetchCellTypes(context) {
   const { projectId } = context;
@@ -58,7 +58,15 @@ const createCellTypesMachine = ({ projectId, feature = 0 }) =>
         idle: {
           on: {
             SET_CELL_TYPE: { actions: 'setCellType' },
-            ASSIGN_CELL_TYPE: { actions: 'assignCellType' },
+            EDIT_CELL_TYPE_LABEL: { actions: 'editCellTypeLabel' },
+            EDITED: 'reloading',
+          },
+        },
+        reloading: {
+          entry: () => console.log('hello'),
+          invoke: {
+            src: fetchCellTypeLabels,
+            onDone: { target: 'idle', actions: 'saveCellTypeLabels' },
           },
         },
       },
@@ -73,6 +81,14 @@ const createCellTypesMachine = ({ projectId, feature = 0 }) =>
         saveCellTypeLabels: assign({
           cellTypeLabels: (_, { data }) => data,
         }),
+        editCellTypeLabel: sendParent((_, { cell, cellType }) => ({
+          type: 'EDIT',
+          action: 'set_cell_type',
+          args: {
+            cell: cell,
+            cell_type: cellType,
+          },
+        })),
       },
     }
   );
