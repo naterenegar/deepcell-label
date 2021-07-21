@@ -1,4 +1,10 @@
-import { Box, FormLabel, IconButton, makeStyles } from '@material-ui/core';
+import {
+  Box,
+  FormLabel,
+  IconButton,
+  makeStyles,
+  Tooltip,
+} from '@material-ui/core';
 import ClearIcon from '@material-ui/icons/Clear';
 import { useCellTypes } from '../../ServiceContext';
 
@@ -22,9 +28,11 @@ function CellTypeHeader() {
   return (
     <Box className={styles.root}>
       <FormLabel>Cell Types</FormLabel>
-      <IconButton size='small' onClick={onClick}>
-        <ClearIcon />
-      </IconButton>
+      <Tooltip title='Unselects Cell Type'>
+        <IconButton size='small' onClick={onClick}>
+          <ClearIcon />
+        </IconButton>
+      </Tooltip>
     </Box>
   );
 }

@@ -39,7 +39,7 @@ function CellTypeButton(props: CellTypeButtonProps) {
   );
 
   const onClick = () => {
-    cellTypes.send({ type: 'SET_CELL_TYPE', cellType: id });
+    cellTypes.send({ type: 'SET_CELL_TYPE', cellType: selected ? null : id });
     if (channels) {
       raw.send({ type: 'SET_LAYERS', channels });
     }
