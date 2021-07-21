@@ -85,32 +85,32 @@ class BaseEdit(object):
     def del_cell_info(self, del_label, frame):
         raise NotImplementedError('del_cell_info is not implemented in BaseEdit')
 
-    def action_change_class_id(self, label, frame, new_class_id):
+    def action_set_cell_type(self, cell, cell_type):
         """
-        Assign a semantic id to one label in one frame.
+        Assign a cell type to a label.
 
         Args:
-            label (int): instance id of the label to change the information about
-            frame (int): frame id of the label to update
-            new_class_id (int): class id to assign to label, must be in existing
-                set of presets for the project
+            cell (int): instance ID of cell
+            cell_type (int): cell type ID to assign to cell
+                             must be an existing cell type in the project
         """
-        # TODO: these probably need to be accessed by feature
-        # as well as by frame
-        existing_assignments = self.labels.cell_type_assignments
+        # TODO: store cell type assignments by feature and by frame
+        cell_type_labels = self.labels.cell_type_assignments
 
-        # semantic class must already exist, ids are keys to presets dict
-        allowed_presets = self.labels.cell_type_presets
+        # Cell type must already exist
+        cell_types = self.labels.cell_type_presets
+        if cell_type not in cell_types:
+            cell_type_options = ''.join(
+                f'{key} ({cell_types[key]["name"]}), ' for key in cell_types)[:-2]
+            raise ValueError(
+                f'Invalid cell type {cell_type}. Select from cell types {cell_type_options}')
+        # Cell must already exist
+        if cell not in self.labels.cell_ids:
+            raise ValueError(f'Invalid cell {cell}')
 
-        if new_class_id in allowed_presets:
-            # instance label must exist in selected frame
-            frame_assignments = existing_assignments.get(frame, {})
-            # can't reassign an instance label that doesn't exist
-            current_assignment = frame_assignments.get(label, None)
-            if current_assignment is not None:
-                existing_assignments[frame][label] = new_class_id
-                # need to update explicitly?
-                self.labels.cell_type_assignments = existing_assignments
+        cell_type_labels[cell] = cell_type
+        # Explicitly copy cell type labels for changes to be detected and persisted by sqlalchemy
+        self.labels.cell_type_assignments = cell_type_labels.copy()
 
     def action_new_single_cell(self, label):
         """
