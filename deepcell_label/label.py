@@ -85,6 +85,33 @@ class BaseEdit(object):
     def del_cell_info(self, del_label, frame):
         raise NotImplementedError('del_cell_info is not implemented in BaseEdit')
 
+    def action_change_class_id(self, label, frame, new_class_id):
+        """
+        Assign a semantic id to one label in one frame.
+
+        Args:
+            label (int): instance id of the label to change the information about
+            frame (int): frame id of the label to update
+            new_class_id (int): class id to assign to label, must be in existing
+                set of presets for the project
+        """
+        # TODO: these probably need to be accessed by feature
+        # as well as by frame
+        existing_assignments = self.labels.cell_type_assignments
+
+        # semantic class must already exist, ids are keys to presets dict
+        allowed_presets = self.labels.cell_type_presets
+
+        if new_class_id in allowed_presets:
+            # instance label must exist in selected frame
+            frame_assignments = existing_assignments.get(frame, {})
+            # can't reassign an instance label that doesn't exist
+            current_assignment = frame_assignments.get(label, None)
+            if current_assignment is not None:
+                existing_assignments[frame][label] = new_class_id
+                # need to update explicitly?
+                self.labels.cell_type_assignments = existing_assignments
+
     def action_new_single_cell(self, label):
         """
         Create new label that replaces an existing label in one frame.
