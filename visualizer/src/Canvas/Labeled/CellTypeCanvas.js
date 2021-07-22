@@ -25,10 +25,11 @@ function CellTypeCanvas() {
 
   const drawOutline = useCallback(
     label =>
-      label < 0 &&
-      (cellTypeLabels[-label] === Number(cellType) || cellType === null)
+      label >= 0
+        ? [0, 0, 0, 0]
+        : cellTypeLabels[-label] === Number(cellType) && cellType !== null
         ? [255, 255, 255, 255]
-        : [0, 0, 0, 0],
+        : [255, 255, 255, 64],
     [cellTypeLabels, cellType]
   );
 
