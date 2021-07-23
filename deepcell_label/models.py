@@ -55,6 +55,7 @@ class Npz(TypeDecorator):
         return np.load(bytestream)['array']
 
 
+@compiles(Npz, 'mysql')
 @compiles(db.PickleType, 'mysql')
 def compile_pickle_mysql(type_, compiler, **kw):
     """
