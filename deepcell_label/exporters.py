@@ -6,6 +6,7 @@ import pathlib
 import tempfile
 import tarfile
 from urllib.parse import urlparse
+import zipfile
 
 import numpy as np
 
@@ -51,6 +52,7 @@ class Exporter():
         Returns:
             function: exports a DeepCell Label project into a BytesIO buffer
         """
+        return self.export_zip
         if self.project.is_zstack:
             # _export = self.export_npz
             _export = self.export_zip
@@ -97,13 +99,13 @@ class Exporter():
         with zipfile.ZipFile(store_zip, 'w',
                              compression=zipfile.ZIP_DEFLATED) as container:
 
-            with BytesIO() as X_bytes:
+            with io.BytesIO() as X_bytes:
                 with container.open('X.npy', 'w') as zip_X:
                     np.save(X_bytes, self.project.raw_array)
                     X_bytes.seek(0)
                     zip_X.write(X_bytes.getvalue())
 
-            with BytesIO() as y_bytes:
+            with io.BytesIO() as y_bytes:
                 with container.open('y.npy', 'w') as zip_y:
                     np.save(y_bytes, self.project.label_array)
                     y_bytes.seek(0)
@@ -114,8 +116,9 @@ class Exporter():
                 'cell_types': self.project.labels.cell_type_presets,
                 'assignments': self.project.labels.cell_type_assignments
             })
+            channels = json.dumps(self.project.labels.channels)
             container.writestr('classes/cell_type.json', classifications)
-            container.writestr('channels.json', self.project.labels.channels)
+            container.writestr('channels.json', channels)
 
         store_zip.seek(0)
 
