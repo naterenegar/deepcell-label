@@ -1,10 +1,10 @@
 """Classes to export a DeepCell Label project as a .npz or .trk file."""
 import boto3
 import io
+import json
 import pathlib
 import tempfile
 import tarfile
-import json
 from urllib.parse import urlparse
 
 import numpy as np
@@ -32,7 +32,9 @@ class Exporter():
         if self.project.is_track:
             path = path.with_suffix('.trk')
         else:
-            path = path.with_suffix('.npz')
+            # path = path.with_suffix('.npz')
+            # this can still be loaded with np.load to get only the arrays
+            path = path.with_suffix('.zip')
         return str(path)
 
     def export(self):
@@ -50,7 +52,8 @@ class Exporter():
             function: exports a DeepCell Label project into a BytesIO buffer
         """
         if self.project.is_zstack:
-            _export = self.export_npz
+            # _export = self.export_npz
+            _export = self.export_zip
         elif self.project.is_track:
             _export = self.export_trk
         else:
@@ -76,6 +79,47 @@ class Exporter():
         store_npz.seek(0)
 
         return store_npz
+
+    def export_zip(self):
+        """
+        Creates a npz file based on the image stacks edited in a DeepCell Label project.
+
+        Args:
+            project (deepcell_label.models.Project):
+                DeepCell Label project containing image and channels data to save
+
+        Returns:
+            BytesIO: data buffer containing .zip data
+        """
+        # save file to BytesIO object
+        store_zip = io.BytesIO()
+
+        with zipfile.ZipFile(store_zip, 'w',
+                             compression=zipfile.ZIP_DEFLATED) as container:
+
+            with BytesIO() as X_bytes:
+                with container.open('X.npy', 'w') as zip_X:
+                    np.save(X_bytes, self.project.raw_array)
+                    X_bytes.seek(0)
+                    zip_X.write(X_bytes.getvalue())
+
+            with BytesIO() as y_bytes:
+                with container.open('y.npy', 'w') as zip_y:
+                    np.save(y_bytes, self.project.label_array)
+                    y_bytes.seek(0)
+                    zip_y.write(y_bytes.getvalue())
+
+            # presents and assignments are already in json format
+            classifications = json.dumps({
+                'cell_types': self.project.labels.cell_type_presets,
+                'assignments': self.project.labels.cell_type_assignments
+            })
+            container.writestr('classes/cell_type.json', classifications)
+            container.writestr('channels.json', self.project.labels.channels)
+
+        store_zip.seek(0)
+
+        return store_zip
 
     def export_trk(self):
         # clear any empty tracks before saving file
