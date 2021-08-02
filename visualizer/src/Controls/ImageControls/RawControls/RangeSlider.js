@@ -12,7 +12,7 @@ function RangeSlider({ channelId, color = 'primary' }) {
   const range = useSelector(channel, state => state.context.range);
 
   const onChange = (_, value) => send({ type: 'SET_RANGE', range: value });
-  const onDoubleClick = () => send({ type: 'SET_RANGE', range: [0, 255] });
+  const onDoubleClick = () => send({ type: 'SET_AUTO_RANGE' });
 
   return (
     <>

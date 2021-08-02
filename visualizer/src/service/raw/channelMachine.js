@@ -86,6 +86,7 @@ const createChannelMachine = (projectId, channel, numFrames) =>
         FRAME: { actions: 'useFrame' },
         TOGGLE_INVERT: { actions: 'toggleInvert' },
         SET_RANGE: { actions: 'setRange' },
+        SET_AUTO_RANGE: { actions: 'setAutoRange' },
         SET_BRIGHTNESS: { actions: 'setBrightness' },
         SET_CONTRAST: { actions: 'setContrast' },
         RESET: { actions: 'reset' },
@@ -150,7 +151,8 @@ const createChannelMachine = (projectId, channel, numFrames) =>
           contrast: 0,
         }),
         setAutoRange: assign({
-          range: (_, { data: img }) => {
+          range: ({ rawImage }, { data }) => {
+            const img = data || rawImage;
             // modified from https://github.com/hms-dbmi/viv
             // get ImageData from rawImage
             const canvas = document.createElement('canvas');
