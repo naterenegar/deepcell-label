@@ -2,7 +2,6 @@ import { useSelector } from '@xstate/react';
 import { useCallback } from 'react';
 import { useCellTypes, useSelect } from '../../ServiceContext';
 import DrawLabelsCanvas from './DrawLabelsCanvas';
-import LabeledCanvas from './LabeledCanvas';
 
 function CellTypeCanvas() {
   const toolbar = useSelect();
@@ -35,7 +34,6 @@ function CellTypeCanvas() {
 
   return (
     <>
-      <LabeledCanvas />
       <DrawLabelsCanvas draw={drawHighlight} />
       <DrawLabelsCanvas draw={drawOutline} />
     </>
