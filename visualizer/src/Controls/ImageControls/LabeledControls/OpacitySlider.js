@@ -22,16 +22,18 @@ function OpacitySlider() {
   const opacity = useSelector(labeled, state => state.context.opacity);
 
   const handleOpacityChange = (event, newValue) =>
-    labeled.send({ type: 'SET_OPACITY', opacity: Number(newValue) });
+    labeled.send({ type: 'SET_OPACITY', opacity: newValue });
 
   const handleDoubleClick = event =>
-    labeled.send({ type: 'SET_OPACITY', opacity: 0.3 });
+    labeled.send({ type: 'SET_OPACITY', opacity: [0.3, 1] });
 
   const styles = useStyles();
 
   const tooltipText = (
     <span>
-      Cycle between raw, overlay, and labels with <kbd>Z</kbd>
+      Lower slider sets opacity for all cell outlines.
+      <br />
+      Higher slider sets opacity for selected cell type outlines.
     </span>
   );
 
@@ -45,6 +47,7 @@ function OpacitySlider() {
           valueLabelDisplay='auto'
           min={0}
           max={1}
+          track={false}
           step={0.01}
           onChange={handleOpacityChange}
           onDoubleClick={handleDoubleClick}

@@ -100,7 +100,7 @@ const createLabeledMachine = (projectId, numFeatures, numFrames) =>
         loadingFrame: 0, // needed ??
         features: [], // all segmentations as featureMachines
         featureNames: [], // name of each segmentations
-        opacity: 0,
+        opacity: [0.3, 1],
         lastOpacity: 0.3,
         highlight: true,
         outline: true,
@@ -121,7 +121,6 @@ const createLabeledMachine = (projectId, numFeatures, numFrames) =>
         TOGGLE_HIGHLIGHT: { actions: 'toggleHighlight' },
         TOGGLE_OUTLINE: { actions: 'toggleOutline' },
         SET_OPACITY: { actions: 'setOpacity' },
-        CYCLE_OPACITY: { actions: 'cycleOpacity' },
         LABELED_ARRAY: { actions: sendParent((c, e) => e) },
         LABELS: { actions: sendParent((c, e) => e) },
         EDITED: {
@@ -239,13 +238,11 @@ const createLabeledMachine = (projectId, numFeatures, numFrames) =>
         sendLoaded: sendParent('LABELED_LOADED'),
         toggleHighlight: assign({ highlight: ({ highlight }) => !highlight }),
         setOpacity: assign({
-          opacity: (_, { opacity }) => Math.min(1, Math.max(0, opacity)),
-          lastOpacity: ({ lastOpacity }, { opacity }) =>
-            opacity === 1 || opacity === 0 ? 0.3 : opacity,
-        }),
-        cycleOpacity: assign({
-          opacity: ({ opacity, lastOpacity }) =>
-            opacity === 0 ? lastOpacity : opacity === 1 ? 0 : 1,
+          opacity: (_, { opacity: [opacity, highlightOpacity] }) => 
+            [
+              Math.min(1, Math.max(0, opacity)),
+              Math.min(1, Math.max(0, highlightOpacity)),
+            ]
         }),
         toggleOutline: assign({ outline: ({ outline }) => !outline }),
         save: respond(({ feature }) => ({ type: 'RESTORE', feature })),

@@ -1,6 +1,6 @@
 import { useSelector } from '@xstate/react';
 import { useCallback } from 'react';
-import { useCellTypes, useSelect } from '../../ServiceContext';
+import { useCellTypes, useLabeled, useSelect } from '../../ServiceContext';
 import DrawLabelsCanvas from './DrawLabelsCanvas';
 
 function CellTypeCanvas() {
@@ -13,6 +13,9 @@ function CellTypeCanvas() {
     cellTypes,
     state => state.context.cellTypeLabels
   );
+
+  const labeled = useLabeled();
+  const [opacity, selectedOpacity] = useSelector(labeled, state => state.context.opacity);
 
   const drawHighlight = useCallback(
     label =>
@@ -27,9 +30,9 @@ function CellTypeCanvas() {
       label >= 0
         ? [0, 0, 0, 0]
         : cellTypeLabels[-label] === Number(cellType) && cellType !== null
-        ? [255, 255, 255, 255]
-        : [255, 255, 255, 64],
-    [cellTypeLabels, cellType]
+        ? [255, 255, 255, selectedOpacity * 255]
+        : [255, 255, 255, opacity * 255],
+    [cellTypeLabels, cellType, opacity, selectedOpacity]
   );
 
   return (
