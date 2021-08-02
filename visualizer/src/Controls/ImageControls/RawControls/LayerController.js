@@ -8,6 +8,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { useSelector } from '@xstate/react';
 import { useRaw } from '../../../ServiceContext';
 import LayerOptions from './LayerOptions';
+import RangeSlider from './RangeSlider';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -83,12 +84,13 @@ function LayerSlider({ layer }) {
 function LayerController({ layer }) {
   const classes = useStyles();
 
-  const channel = useSelector(layer, state => state.context.channel);
+  const channelId = useSelector(layer, state => state.context.channel);
+  const color = useSelector(layer, state => state.context.color);
 
   const raw = useRaw();
   const colorMode = useSelector(raw, state => state.context.colorMode);
   const loading = useSelector(colorMode, state =>
-    state.context.loadingChannels.has(channel)
+    state.context.loadingChannels.has(channelId)
   );
 
   return (
@@ -117,7 +119,7 @@ function LayerController({ layer }) {
           <LayerCheckbox layer={layer} />
         </Grid>
         <Grid item xs={10}>
-          <LayerSlider layer={layer} />
+          <RangeSlider channelId={channelId} color={color} />
         </Grid>
       </Grid>
     </Grid>

@@ -19,14 +19,14 @@ export const ChannelCanvas = ({ layer, setCanvases }) => {
   const canvasRef = useRef();
   const ctxRef = useRef();
 
-  const layerIndex = useSelector(layer, state => state.context.layer);
-  const channelIndex = useSelector(layer, state => state.context.channel);
+  const layerId = useSelector(layer, state => state.context.layer);
+  const channelId = useSelector(layer, state => state.context.channel);
   const color = useSelector(layer, state => state.context.color);
-  const [min, max] = useSelector(layer, state => state.context.range);
   const on = useSelector(layer, state => state.context.on);
 
-  const channel = useChannel(channelIndex);
+  const channel = useChannel(channelId);
   const rawImage = useSelector(channel, state => state.context.rawImage);
+  const [min, max] = useSelector(channel, state => state.context.range);
 
   useEffect(() => {
     const channelCanvas = canvasRef.current;
@@ -49,12 +49,12 @@ export const ChannelCanvas = ({ layer, setCanvases }) => {
       ctx.clearRect(0, 0, width, height);
     }
     // assign to channelCanvases to rerender
-    setCanvases(prevCanvases => ({ ...prevCanvases, [layerIndex]: canvas }));
+    setCanvases(prevCanvases => ({ ...prevCanvases, [layerId]: canvas }));
   }, [
     canvasRef,
     setCanvases,
     on,
-    layerIndex,
+    layerId,
     rawImage,
     color,
     min,
@@ -66,14 +66,14 @@ export const ChannelCanvas = ({ layer, setCanvases }) => {
   useEffect(() => {
     return () =>
       setCanvases(prevCanvases => {
-        delete prevCanvases[layerIndex];
+        delete prevCanvases[layerId];
         return { ...prevCanvases };
       });
-  }, [setCanvases, layerIndex]);
+  }, [setCanvases, layerId]);
 
   return (
     <canvas
-      id={`layer${layerIndex}-processing`}
+      id={`layer${layerId}-processing`}
       hidden={true}
       ref={canvasRef}
       width={width}

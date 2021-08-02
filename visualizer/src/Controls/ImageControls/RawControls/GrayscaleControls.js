@@ -9,6 +9,7 @@ import Tooltip from '@material-ui/core/Tooltip';
 import { useSelector } from '@xstate/react';
 import React, { useEffect, useRef } from 'react';
 import { useRaw } from '../../../ServiceContext';
+import RangeSlider from './RangeSlider';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -142,36 +143,10 @@ const ContrastSlider = ({ channel }) => {
     </>
   );
 };
-const RangeSlider = ({ channel }) => {
-  const { send } = channel;
-  const range = useSelector(channel, state => state.context.range);
-
-  const onChange = (_, value) => send({ type: 'SET_RANGE', range: value });
-  const onDoubleClick = () => send({ type: 'SET_RANGE', range: [0, 255] });
-
-  return (
-    <>
-      <FormLabel>Range</FormLabel>
-      <Slider
-        value={range}
-        onChange={onChange}
-        onDoubleClick={onDoubleClick}
-        valueLabelDisplay='off'
-        min={0}
-        max={255}
-        step={1}
-        orientation='horizontal'
-        style={{
-          color: 'primary',
-          marginTop: '7px',
-        }}
-      />
-    </>
-  );
-};
 
 const GrayscaleControls = () => {
   const raw = useRaw();
+  const channelId = useSelector(raw, state => state.context.channel);
   const channel = useSelector(
     raw,
     state => state.context.channels[state.context.channel]
@@ -203,7 +178,8 @@ const GrayscaleControls = () => {
           alignItems='center'
         >
           <Grid item xs={12}>
-            <RangeSlider channel={channel} />
+            <FormLabel>Range</FormLabel>
+            <RangeSlider channelId={channelId} />
             <BrightnessSlider channel={channel} />
             <ContrastSlider channel={channel} />
           </Grid>
