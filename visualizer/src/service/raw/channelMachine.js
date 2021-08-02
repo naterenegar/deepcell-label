@@ -69,7 +69,7 @@ const createChannelMachine = (projectId, channel, numFrames) =>
         loading: {
           invoke: {
             src: fetchRaw,
-            onDone: { target: 'idle', actions: ['saveFrame', 'sendRawLoaded'] },
+            onDone: { target: 'idle', actions: ['saveFrame', 'setAutoRange', 'sendRawLoaded'] },
             onError: {
               target: 'idle',
               actions: (context, event) => console.log(event),
@@ -150,7 +150,7 @@ const createChannelMachine = (projectId, channel, numFrames) =>
           contrast: 0,
         }),
         setAutoRange: assign({
-          range: ({ rawImage: img }) => {
+          range: (_, { data: img }) => {
             // modified from https://github.com/hms-dbmi/viv
             // get ImageData from rawImage
             const canvas = document.createElement('canvas');
