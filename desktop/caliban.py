@@ -5237,7 +5237,7 @@ class RGBNpz(CalibanWindow):
         Helper function for rescaling an image. Image can be single-
         or multi-channel.
         '''
-        percentiles = np.percentile(img[img > 0], [5, 95])
+        percentiles = np.percentile(img[img > 0], [0, 100])
         rescaled_img = rescale_intensity(img,
             in_range=(percentiles[0], percentiles[1]),
             out_range = 'uint8')
